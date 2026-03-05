@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PROJECT_NAME</key>
+	<string>BeLocal</string>
+	<key>PROJECT_URL</key>
+	<string>https://wzecgsyknslaecncbnhs.supabase.co</string>
+	<key>ANON_KEY</key>
+	<string>YOUR_SUPABASE_PUBLISHABLE_KEY</string>
+	<key>TRIPS_TABLE</key>
+	<string>trips</string>
+	<key>FEEDBACK_TABLE</key>
+	<string>traveler_feedback</string>
+	<key>ACTIVITIES_TABLE</key>
+	<string>activities</string>
+	<key>PROFILES_TABLE</key>
+	<string>profiles</string>
+</dict>
+</plist>

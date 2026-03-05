@@ -1,24 +1,14 @@
-//
-//  ContentView.swift
-//  Waypoint
-//
-//  Created by Vincenzo Maritato on 21/02/26.
-//
-
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        RootTabView()
     }
 }
 
 #Preview {
     ContentView()
+        .environment(AppBootstrap())
+        .modelContainer(SwiftDataStack.makeContainer(inMemory: true))
 }

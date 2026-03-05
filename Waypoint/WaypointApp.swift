@@ -1,17 +1,18 @@
-//
-//  WaypointApp.swift
-//  Waypoint
-//
-//  Created by Vincenzo Maritato on 21/02/26.
-//
-
+import SwiftData
 import SwiftUI
 
 @main
 struct WaypointApp: App {
+    @State private var bootstrap = AppBootstrap()
+
+    private let container = SwiftDataStack.makeContainer()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootTabView()
+                .environment(bootstrap)
+                .tint(.accentColor)
         }
+        .modelContainer(container)
     }
 }
