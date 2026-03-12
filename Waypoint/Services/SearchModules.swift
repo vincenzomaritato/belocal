@@ -1,6 +1,6 @@
 import Foundation
 
-struct ToolSearchResult<Item: Hashable & Sendable>: Hashable, Sendable {
+struct ToolSearchResult<Item: Sendable>: Sendable {
     let items: [Item]
     let message: String?
     let isUnavailable: Bool
@@ -25,7 +25,7 @@ struct SearchInput: Sendable {
 }
 
 protocol SearchModule {
-    associatedtype Result: Hashable & Sendable
+    associatedtype Result: Sendable
     func search(_ input: SearchInput) async -> ToolSearchResult<Result>
 }
 

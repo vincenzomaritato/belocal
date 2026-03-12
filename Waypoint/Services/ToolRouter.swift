@@ -6,7 +6,7 @@ enum PlannerTool: String, CaseIterable, Hashable {
     case activities
 }
 
-enum ToolResult: Hashable {
+enum ToolResult {
     case flights(ToolSearchResult<FlightOption>)
     case restaurants(ToolSearchResult<RestaurantOption>)
     case activities(ToolSearchResult<ActivityOption>)
@@ -24,18 +24,14 @@ struct DestinationSnapshot: Sendable {
 }
 
 struct ToolRouter: ToolRoutering {
-    typealias FlightsSearch = @Sendable (SearchInput) async -> ToolSearchResult<FlightOption>
-    typealias RestaurantsSearch = @Sendable (SearchInput) async -> ToolSearchResult<RestaurantOption>
-    typealias ActivitiesSearch = @Sendable (SearchInput) async -> ToolSearchResult<ActivityOption>
-
-    private let flightsSearch: FlightsSearch
-    private let restaurantsSearch: RestaurantsSearch
-    private let activitiesSearch: ActivitiesSearch
+    private let flightsSearch: @Sendable (SearchInput) async -> ToolSearchResult<FlightOption>
+    private let restaurantsSearch: @Sendable (SearchInput) async -> ToolSearchResult<RestaurantOption>
+    private let activitiesSearch: @Sendable (SearchInput) async -> ToolSearchResult<ActivityOption>
 
     init(
-        flightsSearch: @escaping FlightsSearch = { _ in ToolSearchResult(items: []) },
-        restaurantsSearch: @escaping RestaurantsSearch = { _ in ToolSearchResult(items: []) },
-        activitiesSearch: @escaping ActivitiesSearch = { _ in ToolSearchResult(items: []) }
+        flightsSearch: @escaping @Sendable (SearchInput) async -> ToolSearchResult<FlightOption> = { _ in ToolSearchResult(items: []) },
+        restaurantsSearch: @escaping @Sendable (SearchInput) async -> ToolSearchResult<RestaurantOption> = { _ in ToolSearchResult(items: []) },
+        activitiesSearch: @escaping @Sendable (SearchInput) async -> ToolSearchResult<ActivityOption> = { _ in ToolSearchResult(items: []) }
     ) {
         self.flightsSearch = flightsSearch
         self.restaurantsSearch = restaurantsSearch
