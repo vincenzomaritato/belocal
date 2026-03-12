@@ -11,6 +11,7 @@ final class AppBootstrap {
     let coreMLEngine: any RecommendationEngine
     let recommendationNarrativeService: any RecommendationNarrativeServing
     let recommendationQualityReviewService: any RecommendationQualityReviewServing
+    let feedbackTranslationService: any FeedbackTranslationServing
     let co2Estimator: CO2Estimator
     let localFeedbackAggregator: LocalFeedbackAggregator
     let networkMonitor: NetworkMonitor
@@ -62,12 +63,15 @@ final class AppBootstrap {
             primary: FoundationModelsRecommendationQualityReviewService(),
             secondary: OpenAIRecommendationQualityReviewService(openAIChatService: openAIService)
         )
+        self.feedbackTranslationService = FoundationModelsFeedbackTranslationService()
 
         let liveFlights = LiveFlightsSearchModule()
         let liveRestaurants = LiveRestaurantsSearchModule(config: travelConfig)
         let liveActivities = LiveActivitiesSearchModule(config: travelConfig)
         let liveAttractionInfoService = AttractionCardLiveInfoService(config: travelConfig)
-        self.liveActivitiesSearch = { input in await liveActivities.search(input) }
+        self.liveActivitiesSearch = { input in
+            await liveActivities.search(input).items
+        }
         self.liveAttractionInfoLookup = { attractionName, destination in
             await liveAttractionInfoService.fetch(
                 attractionName: attractionName,

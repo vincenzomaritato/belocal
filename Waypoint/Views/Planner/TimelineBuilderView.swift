@@ -7,19 +7,19 @@ struct TimelineBuilderView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Plan timeline")
+                    Text(L10n.tr("Plan timeline"))
                         .font(.headline)
                     Spacer()
                     Button {
                         plannerViewModel.addDay()
                     } label: {
-                        Label("Add Day", systemImage: "plus")
+                        Label(L10n.tr("Add Day"), systemImage: "plus")
                     }
                     .buttonStyle(.bordered)
                 }
 
                 if plannerViewModel.draft.timeline.isEmpty {
-                    Text("No days yet. Add one to begin planning.")
+                    Text(L10n.tr("No days yet. Add one to begin planning."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
@@ -35,16 +35,16 @@ struct TimelineBuilderView: View {
                                     } label: {
                                         Image(systemName: "trash")
                                     }
-                                    .accessibilityLabel("Delete \(day.title)")
+                                    .accessibilityLabel(L10n.f("Delete %@", day.title))
                                 }
 
                                 if day.activities.isEmpty {
-                                    Text("No activities yet")
+                                    Text(L10n.tr("No activities yet"))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 } else {
                                     ForEach(day.activities, id: \.id) { activity in
-                                        Text("• \(activity.title)")
+                                        Text(L10n.f("• %@", activity.title))
                                             .font(.caption)
                                     }
                                 }

@@ -7,9 +7,9 @@ struct TravelAPIConfig {
     let openAIModel: String
     let defaultOriginIATA: String
 
-    var hasGooglePlaces: Bool { !googlePlacesAPIKey.isEmpty }
-    var hasGeoapify: Bool { !geoapifyAPIKey.isEmpty }
-    var hasOpenAI: Bool { !openAIAPIKey.isEmpty }
+    var hasGooglePlaces: Bool { Self.isConfiguredValue(googlePlacesAPIKey) }
+    var hasGeoapify: Bool { Self.isConfiguredValue(geoapifyAPIKey) }
+    var hasOpenAI: Bool { Self.isConfiguredValue(openAIAPIKey) }
 
     static func load(bundle: Bundle = .main) -> TravelAPIConfig {
         let env = ProcessInfo.processInfo.environment
@@ -44,4 +44,17 @@ struct TravelAPIConfig {
         openAIModel: "gpt-5.1-mini",
         defaultOriginIATA: "FCO"
     )
+
+    private static func isConfiguredValue(_ value: String) -> Bool {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return false }
+
+        let placeholders = [
+            "YOUR_GOOGLE_PLACES_API_KEY",
+            "YOUR_GEOAPIFY_API_KEY",
+            "YOUR_OPENAI_API_KEY"
+        ]
+
+        return !placeholders.contains(normalized)
+    }
 }

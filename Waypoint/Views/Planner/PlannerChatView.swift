@@ -28,7 +28,7 @@ struct PlannerChatView: View {
             let baseBottomInset = max(18, geometry.safeAreaInsets.bottom + 10)
             let keyboardLift = max(0, keyboardHeight - geometry.safeAreaInsets.bottom)
             let dockBottomPadding = keyboardLift > 0 ? (keyboardLift + 8) : baseBottomInset
-            let contentBottomBaseInset: CGFloat = viewModel.currentQuestion == nil ? 36 : 112
+            let contentBottomBaseInset: CGFloat = viewModel.currentQuestion == nil ? 112 : 208
             let contentBottomInset = contentBottomBaseInset + keyboardLift
 
             ZStack(alignment: .bottom) {
@@ -184,11 +184,12 @@ struct PlannerChatView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Close planner chat")
-                .accessibilityHint("Returns to the planner overview")
+                .accessibilityTapTarget()
+                .accessibilityLabel(L10n.tr("Close planner chat"))
+                .accessibilityHint(L10n.tr("Returns to the planner overview"))
 
                 HStack(spacing: 8) {
-                    Text("Planner Studio")
+                    Text(L10n.tr("Planner Studio"))
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(.primary)
                     
@@ -212,8 +213,9 @@ struct PlannerChatView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Restart planner")
-                .accessibilityHint("Clears current progress and starts a new planning journey")
+                .accessibilityTapTarget()
+                .accessibilityLabel(L10n.tr("Restart planner"))
+                .accessibilityHint(L10n.tr("Clears current progress and starts a new planning journey"))
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 8)
@@ -245,7 +247,7 @@ struct PlannerChatView: View {
         }
         .frame(width: 24, height: 24)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Planner progress")
+        .accessibilityLabel(L10n.tr("Planner progress"))
         .accessibilityValue(viewModel.progressLabel)
     }
 
@@ -282,7 +284,7 @@ struct PlannerChatView: View {
                     .lineLimit(1)
             }
 
-            Text(node.value ?? "Waiting...")
+            Text(node.value ?? L10n.tr("Waiting..."))
                 .font(.caption2)
                 .foregroundStyle(node.value == nil ? .secondary : .primary)
                 .lineLimit(1)
@@ -315,12 +317,6 @@ struct PlannerChatView: View {
 
                     if !viewModel.contextualActionGroups.isEmpty {
                         contextualActionBoard
-                    }
-
-                    if let report = viewModel.finalReport {
-                        finalReportCard(report)
-                    } else if viewModel.isGeneratingFinalReport {
-                        finalReportLoadingCard
                     }
 
                     ForEach(viewModel.messages) { message in
@@ -419,10 +415,10 @@ struct PlannerChatView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(question.title)
+                    Text(viewModel.localizedQuestionTitle(for: question.key))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Text(question.subtitle)
+                    Text(viewModel.localizedQuestionSubtitle(for: question.key))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -442,7 +438,7 @@ struct PlannerChatView: View {
                             await viewModel.submitQuickOption(option, service: bootstrap.openAIChatService)
                         }
                     } label: {
-                        Text(option)
+                        Text(viewModel.localizedOption(option, for: question.key))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
@@ -459,6 +455,7 @@ struct PlannerChatView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityTapTarget()
                     .disabled(viewModel.isBusy)
                 }
             }
@@ -469,7 +466,7 @@ struct PlannerChatView: View {
                         await viewModel.submitSurpriseOption(service: bootstrap.openAIChatService)
                     }
                 } label: {
-                    Label("Surprise Me", systemImage: "sparkles")
+                    Label(L10n.tr("Surprise Me"), systemImage: "sparkles")
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
@@ -479,6 +476,7 @@ struct PlannerChatView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityTapTarget()
                 .disabled(viewModel.isBusy)
 
                 Button {
@@ -486,7 +484,7 @@ struct PlannerChatView: View {
                         await viewModel.skipCurrentQuestion(service: bootstrap.openAIChatService)
                     }
                 } label: {
-                    Label("Skip", systemImage: "forward.fill")
+                    Label(L10n.tr("Skip"), systemImage: "forward.fill")
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
@@ -496,6 +494,7 @@ struct PlannerChatView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityTapTarget()
                 .disabled(viewModel.isBusy)
 
                 Spacer(minLength: 0)
@@ -516,26 +515,6 @@ struct PlannerChatView: View {
 
     private var composerBar: some View {
         HStack(alignment: .center, spacing: 10) {
-            Button {
-                if viewModel.currentQuestion != nil {
-                    Task {
-                        await viewModel.submitSurpriseOption(service: bootstrap.openAIChatService)
-                    }
-                }
-            } label: {
-                Image(systemName: viewModel.currentQuestion == nil ? "paperclip" : "dice.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(viewModel.currentQuestion == nil ? "Attachments unavailable" : "Surprise option")
-            .accessibilityHint(viewModel.currentQuestion == nil ? "No attachment action is available right now" : "Pick a random suggested answer")
-
-            Rectangle()
-                .fill(Color.primary.opacity(colorScheme == .dark ? 0.18 : 0.10))
-                .frame(width: 1, height: 24)
-
             TextField(viewModel.composerPlaceholder, text: $viewModel.composerText, axis: .vertical)
                 .lineLimit(1 ... 4)
                 .textInputAutocapitalization(.sentences)
@@ -555,10 +534,10 @@ struct PlannerChatView: View {
                     await viewModel.sendCurrentMessage(service: bootstrap.openAIChatService)
                 }
             } label: {
-                Image(systemName: hasText ? "arrow.up" : "mic.fill")
-                    .font(.system(size: hasText ? 15 : 20, weight: hasText ? .bold : .medium))
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(hasText ? Color.white : Color.secondary)
-                    .frame(width: hasText ? 34 : 36, height: hasText ? 34 : 36)
+                    .frame(width: 34, height: 34)
                     .background(
                         Group {
                             if hasText {
@@ -578,9 +557,10 @@ struct PlannerChatView: View {
                     )
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.isBusy)
-            .accessibilityLabel(hasText ? "Send message" : "Voice input unavailable")
-            .accessibilityHint(hasText ? "Sends the current message to Planner Studio" : "Type a message to enable sending")
+            .accessibilityTapTarget()
+            .disabled(viewModel.isBusy || !hasText)
+            .accessibilityLabel(L10n.tr("Send message"))
+            .accessibilityHint(hasText ? L10n.tr("Sends the current message to Planner Studio") : L10n.tr("Type a message to enable sending"))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -784,17 +764,17 @@ struct PlannerChatView: View {
     private func headingFont(level: Int) -> Font {
         switch level {
         case 1:
-            return .system(size: 32, weight: .bold, design: .rounded)
+            return .system(size: 22, weight: .bold, design: .rounded)
         case 2:
-            return .system(size: 28, weight: .bold, design: .rounded)
+            return .system(size: 20, weight: .bold, design: .rounded)
         case 3:
-            return .system(size: 24, weight: .bold, design: .rounded)
-        case 4:
-            return .system(size: 21, weight: .bold, design: .rounded)
-        case 5:
-            return .system(size: 19, weight: .bold, design: .rounded)
-        default:
             return .system(size: 18, weight: .bold, design: .rounded)
+        case 4:
+            return .system(size: 17, weight: .semibold, design: .rounded)
+        case 5:
+            return .system(size: 16, weight: .semibold, design: .rounded)
+        default:
+            return .system(size: 15, weight: .semibold, design: .rounded)
         }
     }
 
@@ -1112,7 +1092,7 @@ struct PlannerChatView: View {
 
     private var contextualActionBoard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Agent Actions")
+            Text(L10n.tr("Agent Actions"))
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -1203,7 +1183,7 @@ struct PlannerChatView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(report.headline)
                         .font(.headline.weight(.semibold))
-                    Text("Final Trip Brief • \(report.generatedAt.formatted(date: .abbreviated, time: .shortened))")
+                    Text(L10n.f("Final Trip Brief • %@", report.generatedAt.formatted(date: .abbreviated, time: .shortened)))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1227,9 +1207,10 @@ struct PlannerChatView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityTapTarget()
                     .disabled(viewModel.isBusy || viewModel.isPersistingBrief)
-                    .accessibilityLabel("Save final brief")
-                    .accessibilityHint("Saves this brief to My Plan")
+                    .accessibilityLabel(L10n.tr("Save final brief"))
+                    .accessibilityHint(L10n.tr("Saves this brief to My Plan"))
 
                     Button {
                         Task {
@@ -1245,9 +1226,10 @@ struct PlannerChatView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityTapTarget()
                     .disabled(viewModel.isBusy)
-                    .accessibilityLabel("Refresh final brief")
-                    .accessibilityHint("Regenerates the final travel brief")
+                    .accessibilityLabel(L10n.tr("Refresh final brief"))
+                    .accessibilityHint(L10n.tr("Regenerates the final travel brief"))
                 }
             }
 
@@ -1259,7 +1241,7 @@ struct PlannerChatView: View {
 
             if !report.attractions.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    sectionLabel("Top Attractions")
+                    sectionLabel(L10n.tr("Top Attractions"))
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(report.attractions.prefix(8)) { attraction in
@@ -1272,22 +1254,22 @@ struct PlannerChatView: View {
 
             if !report.dailyHighlights.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    sectionLabel("Daily Highlights")
+                    sectionLabel(L10n.tr("Daily Highlights"))
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(report.dailyHighlights.prefix(5)) { day in
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(day.day)
                                         .font(.caption.weight(.bold))
-                                    Text("AM: \(day.morning)")
-                                        .font(.caption2)
-                                    Text("PM: \(day.afternoon)")
-                                        .font(.caption2)
-                                    Text("EVE: \(day.evening)")
-                                        .font(.caption2)
+                                    Text(L10n.f("AM: %@", day.morning))
+                                        .font(.footnote)
+                                    Text(L10n.f("PM: %@", day.afternoon))
+                                        .font(.footnote)
+                                    Text(L10n.f("EVE: %@", day.evening))
+                                        .font(.footnote)
                                     Divider()
-                                    Text("Rain: \(day.rainFallback)")
-                                        .font(.caption2)
+                                    Text(L10n.f("Rain: %@", day.rainFallback))
+                                        .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
                                 .padding(10)
@@ -1304,7 +1286,7 @@ struct PlannerChatView: View {
 
             if !report.checklist.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    sectionLabel("Checklist")
+                    sectionLabel(L10n.tr("Checklist"))
                     ForEach(Array(report.checklist.prefix(7).enumerated()), id: \.offset) { index, line in
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "\(index + 1).circle.fill")
@@ -1320,9 +1302,9 @@ struct PlannerChatView: View {
 
             if !report.notes.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
-                    sectionLabel("Notes")
+                    sectionLabel(L10n.tr("Notes"))
                     ForEach(Array(report.notes.prefix(4).enumerated()), id: \.offset) { _, note in
-                        Text("• \(note)")
+                        Text(L10n.f("• %@", note))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -1426,14 +1408,14 @@ struct PlannerChatView: View {
 
                 if !liveInfo.placeTypes.isEmpty {
                     Text(liveInfo.placeTypes.prefix(3).map(readablePlaceType).joined(separator: " • "))
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
 
                 if let phone = liveInfo.phoneNumber, !phone.isEmpty {
                     Label(phone, systemImage: "phone.fill")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -1443,8 +1425,8 @@ struct PlannerChatView: View {
                         Button {
                             openURL(mapsURL)
                         } label: {
-                            Label("Maps", systemImage: "map")
-                                .font(.caption2.weight(.semibold))
+                            Label(L10n.tr("Maps"), systemImage: "map")
+                                .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
@@ -1454,14 +1436,15 @@ struct PlannerChatView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityTapTarget()
                     }
 
                     if let wikiURL = liveInfo.wikiArticleURL {
                         Button {
                             openURL(wikiURL)
                         } label: {
-                            Label("Wiki", systemImage: "book.closed")
-                                .font(.caption2.weight(.semibold))
+                            Label(L10n.tr("Wiki"), systemImage: "book.closed")
+                                .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
@@ -1471,14 +1454,15 @@ struct PlannerChatView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityTapTarget()
                     }
 
                     if let websiteURL = liveInfo.websiteURL {
                         Button {
                             openURL(websiteURL)
                         } label: {
-                            Label("Website", systemImage: "safari")
-                                .font(.caption2.weight(.semibold))
+                            Label(L10n.tr("Website"), systemImage: "safari")
+                                .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
@@ -1488,6 +1472,7 @@ struct PlannerChatView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityTapTarget()
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1495,8 +1480,8 @@ struct PlannerChatView: View {
                 HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Loading live info...")
-                        .font(.caption2)
+                    Text(L10n.tr("Loading live info..."))
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -1505,19 +1490,19 @@ struct PlannerChatView: View {
 
             HStack(spacing: 6) {
                 attractionActionButton(
-                    title: "Details",
+                    title: L10n.tr("Details"),
                     icon: "info.circle",
                     action: .details,
                     attraction: attraction
                 )
                 attractionActionButton(
-                    title: "In plan",
+                    title: L10n.tr("In plan"),
                     icon: "calendar.badge.plus",
                     action: .fitInDayPlan,
                     attraction: attraction
                 )
                 attractionActionButton(
-                    title: "Alt",
+                    title: L10n.tr("Alt"),
                     icon: "arrow.triangle.2.circlepath",
                     action: .findAlternative,
                     attraction: attraction
@@ -1587,7 +1572,7 @@ struct PlannerChatView: View {
 
     private func attractionOpenText(_ info: AttractionCardLiveInfo) -> String? {
         guard let openNow = info.openNow else { return nil }
-        return openNow ? "Open now" : "Closed now"
+        return openNow ? L10n.tr("Open now") : L10n.tr("Closed now")
     }
 
     private func attractionWeatherText(_ info: AttractionCardLiveInfo) -> String? {
@@ -1641,13 +1626,13 @@ struct PlannerChatView: View {
     private func reportFactsGrid(_ report: PlannerFinalReport) -> some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                factCard("Focus", value: report.destinationFocus, icon: "location.fill")
-                factCard("Best Window", value: report.bestTravelWindow, icon: "calendar")
+                factCard(L10n.tr("Focus"), value: report.destinationFocus, icon: "location.fill")
+                factCard(L10n.tr("Best Window"), value: report.bestTravelWindow, icon: "calendar")
             }
 
             HStack(spacing: 8) {
-                factCard("Budget", value: report.budgetSnapshot, icon: "wallet.pass.fill")
-                factCard("Transport", value: report.transportStrategy, icon: "tram")
+                factCard(L10n.tr("Budget"), value: report.budgetSnapshot, icon: "wallet.pass.fill")
+                factCard(L10n.tr("Transport"), value: report.transportStrategy, icon: "tram")
             }
         }
     }
@@ -1687,7 +1672,7 @@ struct PlannerChatView: View {
     private var finalReportLoadingCard: some View {
         HStack(spacing: 10) {
             ProgressView()
-            Text("Building the Final Trip Brief with attractions and logistics...")
+            Text(L10n.tr("Building the Final Trip Brief with attractions and logistics..."))
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
@@ -1712,12 +1697,12 @@ struct PlannerChatView: View {
 
             Text(
                 viewModel.stage == .generating
-                ? "Building the full planner"
+                ? L10n.tr("Building the full planner")
                 : viewModel.isPersistingBrief
-                ? "Saving to My Plan"
+                ? L10n.tr("Saving to My Plan")
                 : viewModel.isGeneratingFinalReport
-                ? "Composing final trip brief"
-                : "Thinking"
+                ? L10n.tr("Composing final trip brief")
+                : L10n.tr("Thinking")
             )
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)

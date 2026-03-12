@@ -23,9 +23,9 @@ struct GlassCard<Content: View>: View {
 #Preview {
     GlassCard {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Glass Card")
+            Text(L10n.tr("Glass Card"))
                 .font(.headline)
-            Text("Reusable container with material blur and subtle stroke.")
+            Text(L10n.tr("Reusable container with material blur and subtle stroke."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

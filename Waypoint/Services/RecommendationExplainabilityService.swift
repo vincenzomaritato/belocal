@@ -9,32 +9,32 @@ struct RecommendationExplainabilityService: ExplainabilityService {
     ) -> String {
         let budgetFit: String = {
             if destination.costIndex <= normalizedBudgetIndex(for: userProfile) {
-                return "fits your budget range"
+                return L10n.tr("fits your budget range")
             }
-            return "is slightly above your usual budget"
+            return L10n.tr("is slightly above your usual budget")
         }()
 
         let ecoLine: String = {
             if destination.ecoScore >= 80 {
-                return "strong sustainability indicators"
+                return L10n.tr("strong sustainability indicators")
             }
-            return "balanced sustainability for your profile"
+            return L10n.tr("balanced sustainability for your profile")
         }()
 
         let homeDistance = TravelDistanceCalculator.distanceKm(from: userProfile, to: destination)
         let distanceLine: String
         switch homeDistance {
         case ..<1_500:
-            distanceLine = "easy to reach from your home base"
+            distanceLine = L10n.tr("easy to reach from your home base")
         case ..<4_500:
-            distanceLine = "a medium-haul option from your home base"
+            distanceLine = L10n.tr("a medium-haul option from your home base")
         default:
-            distanceLine = "a long-haul option worth planning ahead"
+            distanceLine = L10n.tr("a long-haul option worth planning ahead")
         }
 
-        let style = dominantStyle.lowercased()
+        let style = L10n.style(dominantStyle).lowercased()
         let score = Int(breakdown.finalScore.rounded())
-        return "\(destination.name) matches your \(style) style, is \(distanceLine), \(budgetFit), offers \(ecoLine), and reaches an overall \(score)% match."
+        return L10n.f("%@ matches your %@ style, is %@, %@, offers %@, and reaches an overall %d%% match.", destination.name, style, distanceLine, budgetFit, ecoLine, score)
     }
 
     private func normalizedBudgetIndex(for profile: UserProfile) -> Double {

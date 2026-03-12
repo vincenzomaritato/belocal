@@ -1,8 +1,12 @@
 import Foundation
 
 struct LiveFlightsSearchModule: SearchModule {
-    func search(_ input: SearchInput) async -> [FlightOption] {
-        []
+    func search(_ input: SearchInput) async -> ToolSearchResult<FlightOption> {
+        ToolSearchResult(
+            items: [],
+            message: L10n.tr("Live flight search is disabled in this build."),
+            isUnavailable: true
+        )
     }
 }
 
@@ -13,19 +17,23 @@ struct LiveRestaurantsSearchModule: SearchModule {
         self.config = config
     }
 
-    func search(_ input: SearchInput) async -> [RestaurantOption] {
+    func search(_ input: SearchInput) async -> ToolSearchResult<RestaurantOption> {
         guard config.hasGeoapify else {
-            return []
+            return ToolSearchResult(
+                items: [],
+                message: L10n.tr("Restaurant search is unavailable because Geoapify is not configured."),
+                isUnavailable: true
+            )
         }
 
         guard let url = makeGeoapifyURL(input: input, categories: "catering.restaurant", key: config.geoapifyAPIKey) else {
-            return []
+            return ToolSearchResult(items: [], message: L10n.tr("Restaurant search is unavailable right now."))
         }
 
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                return []
+                return ToolSearchResult(items: [], message: L10n.tr("Restaurant search failed. Try again in a moment."))
             }
 
             let decoded = try JSONDecoder().decode(GeoapifyPlacesResponse.self, from: data)
@@ -36,9 +44,9 @@ struct LiveRestaurantsSearchModule: SearchModule {
                 return RestaurantOption(id: UUID(), name: name, cuisine: categories, estimatedCost: price)
             }
 
-            return Array(mapped.prefix(8))
+            return ToolSearchResult(items: Array(mapped.prefix(8)))
         } catch {
-            return []
+            return ToolSearchResult(items: [], message: L10n.tr("Restaurant search failed. Check your connection and try again."))
         }
     }
 
@@ -55,20 +63,24 @@ struct LiveActivitiesSearchModule: SearchModule {
         self.config = config
     }
 
-    func search(_ input: SearchInput) async -> [ActivityOption] {
+    func search(_ input: SearchInput) async -> ToolSearchResult<ActivityOption> {
         guard config.hasGeoapify else {
-            return []
+            return ToolSearchResult(
+                items: [],
+                message: L10n.tr("Activity search is unavailable because Geoapify is not configured."),
+                isUnavailable: true
+            )
         }
 
         let categories = "tourism.sights,entertainment"
         guard let url = makeGeoapifyURL(input: input, categories: categories, key: config.geoapifyAPIKey) else {
-            return []
+            return ToolSearchResult(items: [], message: L10n.tr("Activity search is unavailable right now."))
         }
 
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                return []
+                return ToolSearchResult(items: [], message: L10n.tr("Activity search failed. Try again in a moment."))
             }
 
             let decoded = try JSONDecoder().decode(GeoapifyPlacesResponse.self, from: data)
@@ -79,9 +91,9 @@ struct LiveActivitiesSearchModule: SearchModule {
                 return ActivityOption(id: UUID(), title: title, category: category, estimatedCost: min(price, max(15, input.budget / 10)))
             }
 
-            return Array(mapped.prefix(8))
+            return ToolSearchResult(items: Array(mapped.prefix(8)))
         } catch {
-            return []
+            return ToolSearchResult(items: [], message: L10n.tr("Activity search failed. Check your connection and try again."))
         }
     }
 }

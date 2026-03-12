@@ -130,12 +130,12 @@ enum DestinationMetadataInferer {
     private static func inferredClimate(latitude: Double) -> String {
         let absLatitude = abs(latitude)
         if absLatitude < 24 {
-            return "Warm"
+            return L10n.tr("Warm")
         }
         if absLatitude < 46 {
-            return "Temperate"
+            return L10n.tr("Temperate")
         }
-        return "Cool"
+        return L10n.tr("Cool")
     }
 
     private static func inferredTypicalSeason(climate: String) -> [String] {

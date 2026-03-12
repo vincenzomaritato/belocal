@@ -7,9 +7,9 @@ enum PlannerTool: String, CaseIterable, Hashable {
 }
 
 enum ToolResult: Hashable {
-    case flights([FlightOption])
-    case restaurants([RestaurantOption])
-    case activities([ActivityOption])
+    case flights(ToolSearchResult<FlightOption>)
+    case restaurants(ToolSearchResult<RestaurantOption>)
+    case activities(ToolSearchResult<ActivityOption>)
 }
 
 protocol ToolRoutering {
@@ -24,18 +24,18 @@ struct DestinationSnapshot: Sendable {
 }
 
 struct ToolRouter: ToolRoutering {
-    typealias FlightsSearch = @Sendable (SearchInput) async -> [FlightOption]
-    typealias RestaurantsSearch = @Sendable (SearchInput) async -> [RestaurantOption]
-    typealias ActivitiesSearch = @Sendable (SearchInput) async -> [ActivityOption]
+    typealias FlightsSearch = @Sendable (SearchInput) async -> ToolSearchResult<FlightOption>
+    typealias RestaurantsSearch = @Sendable (SearchInput) async -> ToolSearchResult<RestaurantOption>
+    typealias ActivitiesSearch = @Sendable (SearchInput) async -> ToolSearchResult<ActivityOption>
 
     private let flightsSearch: FlightsSearch
     private let restaurantsSearch: RestaurantsSearch
     private let activitiesSearch: ActivitiesSearch
 
     init(
-        flightsSearch: @escaping FlightsSearch = { _ in [] },
-        restaurantsSearch: @escaping RestaurantsSearch = { _ in [] },
-        activitiesSearch: @escaping ActivitiesSearch = { _ in [] }
+        flightsSearch: @escaping FlightsSearch = { _ in ToolSearchResult(items: []) },
+        restaurantsSearch: @escaping RestaurantsSearch = { _ in ToolSearchResult(items: []) },
+        activitiesSearch: @escaping ActivitiesSearch = { _ in ToolSearchResult(items: []) }
     ) {
         self.flightsSearch = flightsSearch
         self.restaurantsSearch = restaurantsSearch
@@ -57,34 +57,34 @@ struct ToolRouter: ToolRoutering {
 
         switch tool {
         case .flights:
-            let options = await flightsSearch(input)
-            if let first = options.first {
+            let result = await flightsSearch(input)
+            if let first = result.items.first {
                 addToDraft(
                     activity: DraftActivity(type: .flight, title: "\(first.airline) • €\(Int(first.price))", note: "\(String(format: "%.1f", first.durationHours))h"),
                     draft: &draft
                 )
             }
-            return .flights(options)
+            return .flights(result)
 
         case .restaurants:
-            let options = await restaurantsSearch(input)
-            if let first = options.first {
+            let result = await restaurantsSearch(input)
+            if let first = result.items.first {
                 addToDraft(
                     activity: DraftActivity(type: .restaurant, title: first.name, note: "\(first.cuisine) • €\(Int(first.estimatedCost))"),
                     draft: &draft
                 )
             }
-            return .restaurants(options)
+            return .restaurants(result)
 
         case .activities:
-            let options = await activitiesSearch(input)
-            if let first = options.first {
+            let result = await activitiesSearch(input)
+            if let first = result.items.first {
                 addToDraft(
                     activity: DraftActivity(type: .activity, title: first.title, note: "\(first.category) • €\(Int(first.estimatedCost))"),
                     draft: &draft
                 )
             }
-            return .activities(options)
+            return .activities(result)
         }
     }
 

@@ -7,8 +7,8 @@ enum FeedbackSourceType: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .traveler: return "Traveler"
-        case .local: return "Local"
+        case .traveler: return L10n.tr("Traveler")
+        case .local: return L10n.tr("Local")
         }
     }
 
@@ -21,8 +21,8 @@ enum FeedbackSourceType: String, Codable, CaseIterable {
 
     var destinationSentencePrefix: String {
         switch self {
-        case .traveler: return "Traveler from"
-        case .local: return "Local in"
+        case .traveler: return L10n.tr("Traveler from")
+        case .local: return L10n.tr("Local in")
         }
     }
 }
@@ -104,17 +104,17 @@ final class TravelerFeedback {
         case .local:
             let destination = destinationName.trimmingCharacters(in: .whitespacesAndNewlines)
             if !destination.isEmpty {
-                return "\(sourceType.destinationSentencePrefix) \(destination)"
+                return L10n.f("%@ %@", sourceType.destinationSentencePrefix, destination)
             }
             if !authorHomeLabel.isEmpty {
-                return "\(sourceType.destinationSentencePrefix) \(authorHomeLabel)"
+                return L10n.f("%@ %@", sourceType.destinationSentencePrefix, authorHomeLabel)
             }
-            return "Local perspective"
+            return L10n.tr("Local perspective")
         case .traveler:
             if !authorHomeLabel.isEmpty {
-                return "\(sourceType.destinationSentencePrefix) \(authorHomeLabel)"
+                return L10n.f("%@ %@", sourceType.destinationSentencePrefix, authorHomeLabel)
             }
-            return "Traveler perspective"
+            return L10n.tr("Traveler perspective")
         }
     }
 }

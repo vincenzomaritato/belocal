@@ -4,30 +4,24 @@ import SwiftUI
 
 private enum ExplorerSectionTab: String, CaseIterable, Identifiable {
     case forYou
-    case info
     case attractions
-    case restaurants
     case feedback
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .forYou: return "For You"
-        case .info: return "Info"
-        case .attractions: return "Attractions"
-        case .restaurants: return "Restaurants"
-        case .feedback: return "Feedback"
+        case .forYou: return L10n.tr("For You")
+        case .feedback: return L10n.tr("Feedback")
+        case .attractions: return L10n.tr("Attractions")
         }
     }
 
     var symbol: String {
         switch self {
         case .forYou: return "sparkles"
-        case .info: return "text.book.closed"
-        case .attractions: return "building.columns"
-        case .restaurants: return "fork.knife"
         case .feedback: return "star.bubble"
+        case .attractions: return "building.columns"
         }
     }
 }
@@ -67,6 +61,7 @@ struct CityExplorerView: View {
     @State private var isPanelPresented = true
     @State private var selectedDetent: PresentationDetent = .fraction(0.42)
     @State private var selectedTab: ExplorerSectionTab = .forYou
+    @State private var translatedFeedbackByID: [UUID: FeedbackTranslationContent] = [:]
 
     private var placeLimit: Int {
         if selectedDetent == .large { return 10 }
@@ -97,7 +92,9 @@ struct CityExplorerView: View {
     }
 
     private var topFeedbackTags: [String] {
-        let tags = viewModel.feedbackEntries.flatMap(\.tags)
+        let tags = viewModel.feedbackEntries.flatMap { entry in
+            translatedFeedbackByID[entry.id]?.tags ?? entry.tags
+        }
         let counts = Dictionary(tags.map { ($0, 1) }, uniquingKeysWith: +)
         return counts
             .sorted { lhs, rhs in
@@ -112,9 +109,9 @@ struct CityExplorerView: View {
 
     private var mapAccessibilityLabel: String {
         if let city = viewModel.selectedCity {
-            return "City map centered on \(city.name)"
+            return L10n.f("City map centered on %@", city.name)
         }
-        return "City map"
+        return L10n.tr("City map")
     }
 
     var body: some View {
@@ -129,7 +126,7 @@ struct CityExplorerView: View {
                 .mapStyle(.standard(pointsOfInterest: .excludingAll))
                 .ignoresSafeArea()
                 .accessibilityLabel(mapAccessibilityLabel)
-                .accessibilityHint("Use gestures to explore the map and tap to select a city")
+                .accessibilityHint(L10n.tr("Use gestures to explore the map and tap to select a city"))
                 .simultaneousGesture(mapTapGesture(proxy: proxy))
                 .overlay(alignment: .top) {
                     topMapChrome
@@ -168,6 +165,21 @@ struct CityExplorerView: View {
         .onDisappear {
             runningTask?.cancel()
         }
+        .task(id: homeViewModel.exploreDataVersion) {
+            guard viewModel.selectedCity != nil else { return }
+            viewModel.refreshLocalMatches(homeViewModel: homeViewModel)
+        }
+        .task(id: feedbackTranslationTaskID) {
+            await refreshFeedbackTranslations()
+        }
+    }
+
+    private var feedbackTranslationTaskID: String {
+        let payload = viewModel.feedbackEntries.map { entry in
+            "\(entry.id.uuidString)|\(entry.text)|\(entry.tags.joined(separator: "||"))"
+        }
+        .joined(separator: ":::")
+        return "\(L10n.preferredLanguageCode)|\(payload)"
     }
 
     private var selectedCityMarker: some View {
@@ -224,9 +236,9 @@ struct CityExplorerView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Explore")
+                    Text(L10n.tr("Explore"))
                         .font(.title3.weight(.semibold))
-                    Text("Tap map or search a city")
+                    Text(L10n.tr("Tap map or search a city"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -234,7 +246,7 @@ struct CityExplorerView: View {
                 Spacer(minLength: 0)
 
                 if isLoadingAnyData {
-                    Label("Updating", systemImage: "sparkles")
+                    Label(L10n.tr("Updating"), systemImage: "sparkles")
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 11)
                         .padding(.vertical, 8)
@@ -310,11 +322,11 @@ struct CityExplorerView: View {
     private var panelHeader: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(viewModel.selectedCity?.name ?? "City Explorer")
+                Text(viewModel.selectedCity?.name ?? L10n.tr("City Explorer"))
                     .font(.title3.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.84)
-                Text(viewModel.selectedCity?.label ?? "Search a city or long press on map.")
+                Text(viewModel.selectedCity?.label ?? L10n.tr("Search a city or long press on map."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -332,8 +344,9 @@ struct CityExplorerView: View {
                     .frame(width: 30, height: 30)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Hide panel")
-            .accessibilityHint("Collapses city details and returns focus to the map")
+            .accessibilityTapTarget()
+            .accessibilityLabel(L10n.tr("Hide panel"))
+            .accessibilityHint(L10n.tr("Collapses city details and returns focus to the map"))
         }
         .padding(.top)
         .padding(.horizontal, 5)
@@ -344,7 +357,7 @@ struct CityExplorerView: View {
             selectedDetent = .fraction(0.42)
             isPanelPresented = true
         } label: {
-            Label("Show details", systemImage: "slider.horizontal.3")
+                Label(L10n.tr("Show details"), systemImage: "slider.horizontal.3")
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -360,7 +373,8 @@ struct CityExplorerView: View {
                 )
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Shows city details and recommendations")
+        .accessibilityTapTarget()
+        .accessibilityHint(L10n.tr("Shows city details and recommendations"))
     }
 
     private var searchRow: some View {
@@ -368,7 +382,7 @@ struct CityExplorerView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search city (Lisbon, Tokyo, New York)", text: $viewModel.searchText)
+            TextField(L10n.tr("Search city (Lisbon, Tokyo, New York)"), text: $viewModel.searchText)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -382,7 +396,8 @@ struct CityExplorerView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear search text")
+                .accessibilityTapTarget()
+                .accessibilityLabel(L10n.tr("Clear search text"))
             }
 
             Button {
@@ -393,12 +408,13 @@ struct CityExplorerView: View {
                     .symbolRenderingMode(.hierarchical)
             }
             .buttonStyle(.plain)
+            .accessibilityTapTarget()
             .disabled(viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isResolvingLocation)
-            .accessibilityLabel("Search city")
-            .accessibilityHint("Loads city details on the map")
+            .accessibilityLabel(L10n.tr("Search city"))
+            .accessibilityHint(L10n.tr("Loads city details on the map"))
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 12)
+        .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemBackground))
@@ -449,9 +465,10 @@ struct CityExplorerView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Show \(tab.title) section")
-        .accessibilityValue(selected ? "Selected" : "Not selected")
-        .accessibilityHint("Switch explorer content tab")
+        .accessibilityTapTarget()
+        .accessibilityLabel(L10n.f("Show %@ section", tab.title))
+        .accessibilityValue(selected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Switch explorer content tab"))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -460,21 +477,12 @@ struct CityExplorerView: View {
         switch selectedTab {
         case .forYou:
             forYouSection(city: city)
-        case .info:
-            infoSection
         case .attractions:
             placesSection(
                 title: "Attractions",
                 symbol: "building.columns",
                 places: viewModel.attractions,
                 emptyMessage: "No attractions available yet."
-            )
-        case .restaurants:
-            placesSection(
-                title: "Restaurants",
-                symbol: "fork.knife",
-                places: viewModel.restaurants,
-                emptyMessage: "No restaurants available yet."
             )
         case .feedback:
             feedbackSection
@@ -483,38 +491,23 @@ struct CityExplorerView: View {
 
     private func forYouSection(city: ExplorerCity) -> some View {
         VStack(spacing: 12) {
-            sectionContainer(title: "City Snapshot", symbol: "globe.europe.africa.fill") {
+            sectionContainer(title: L10n.tr("City Snapshot"), symbol: "globe.europe.africa.fill") {
                 citySnapshotCard(city: city)
             }
 
-            sectionContainer(title: "Personalized Brief", symbol: "sparkles") {
+            sectionContainer(title: L10n.tr("Personalized Brief"), symbol: "sparkles") {
                 if viewModel.isGeneratingBrief {
-                    ProgressView("Generating personalized summary...")
+                    ProgressView(L10n.tr("Generating personalized summary..."))
                 } else if let brief = viewModel.personalizedBrief, !brief.isEmpty {
                     Text(brief)
                         .font(.subheadline)
                 } else {
-                    Text("No personalized brief available yet.")
+                    Text(L10n.tr("No personalized brief available yet."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            sectionContainer(title: "Best Picks for You", symbol: "heart.text.square") {
-                VStack(alignment: .leading, spacing: 10) {
-                    if let firstAttraction = viewModel.attractions.first {
-                        highlightedPlace(firstAttraction, title: "Top Attraction", symbol: "building.columns.fill")
-                    }
-                    if let firstRestaurant = viewModel.restaurants.first {
-                        highlightedPlace(firstRestaurant, title: "Top Restaurant", symbol: "fork.knife")
-                    }
-                    if viewModel.attractions.isEmpty && viewModel.restaurants.isEmpty {
-                        Text("No personalized picks available yet.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -580,7 +573,7 @@ struct CityExplorerView: View {
                 Image(systemName: "photo")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.95))
-                Text("City Preview")
+                Text(L10n.tr("City Preview"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.9))
             }
@@ -588,10 +581,10 @@ struct CityExplorerView: View {
     }
 
     private var infoSection: some View {
-        sectionContainer(title: "Info", symbol: "text.book.closed") {
+        sectionContainer(title: L10n.tr("Info"), symbol: "text.book.closed") {
             VStack(alignment: .leading, spacing: 10) {
                 if viewModel.isLoadingInfo {
-                    ProgressView("Loading city summary...")
+                    ProgressView(L10n.tr("Loading city summary..."))
                 } else if let info = viewModel.wikiInfo {
                     Text(info.subtitle)
                         .font(.subheadline.weight(.semibold))
@@ -601,24 +594,24 @@ struct CityExplorerView: View {
                         .lineLimit(infoLineLimit)
                     if let articleURL = info.articleURL {
                         Link(destination: articleURL) {
-                            Label("Read full article", systemImage: "arrow.up.right.square")
+                            Label(L10n.tr("Read full article"), systemImage: "arrow.up.right.square")
                                 .font(.footnote.weight(.semibold))
                         }
                     }
                 } else {
-                    Text("No encyclopedia summary available for this city.")
+                    Text(L10n.tr("No encyclopedia summary available for this city."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
                 if let destination = viewModel.matchedDestination {
                     Divider()
-                    detailRow("Climate", destination.climate)
-                    detailRow("Cost Index", String(format: "%.2f", destination.costIndex))
-                    detailRow("Eco Score", String(format: "%.2f", destination.ecoScore))
-                    detailRow("Crowding Index", String(format: "%.2f", destination.crowdingIndex))
+                    detailRow(L10n.tr("Climate"), destination.climate)
+                    detailRow(L10n.tr("Cost Index"), String(format: "%.2f", destination.costIndex))
+                    detailRow(L10n.tr("Eco Score"), String(format: "%.2f", destination.ecoScore))
+                    detailRow(L10n.tr("Crowding Index"), String(format: "%.2f", destination.crowdingIndex))
                     if !destination.typicalSeason.isEmpty {
-                        detailRow("Best Seasons", destination.typicalSeason.joined(separator: ", "))
+                        detailRow(L10n.tr("Best Seasons"), destination.typicalSeason.joined(separator: ", "))
                     }
                 }
 
@@ -632,15 +625,15 @@ struct CityExplorerView: View {
     }
 
     private var feedbackSection: some View {
-        sectionContainer(title: "Feedback", symbol: "star.bubble") {
+        sectionContainer(title: L10n.tr("Feedback"), symbol: "star.bubble") {
             Group {
                 if viewModel.feedbackEntries.isEmpty {
-                    Text("No community feedback for this destination yet.")
+                    Text(L10n.tr("No community feedback for this destination yet."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
                     HStack(spacing: 12) {
-                        Label("Traveler avg", systemImage: "airplane")
+                        Label(L10n.tr("Traveler avg"), systemImage: "airplane")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.yellow)
                         Text("\(averageRating, specifier: "%.1f") / 5")
@@ -648,7 +641,7 @@ struct CityExplorerView: View {
                             .appNumericTransition(averageRating)
 
                         if localAverageRating > 0 {
-                            Label("Local avg", systemImage: "house.fill")
+                            Label(L10n.tr("Local avg"), systemImage: "house.fill")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             Text("\(localAverageRating, specifier: "%.1f") / 5")
@@ -691,9 +684,9 @@ struct CityExplorerView: View {
         sectionContainer(title: title, symbol: symbol) {
             Group {
                 if viewModel.isLoadingPlaces {
-                    ProgressView("Loading places...")
+                    ProgressView(L10n.tr("Loading places..."))
                 } else if places.isEmpty {
-                    Text(emptyMessage)
+                    Text(L10n.tr(emptyMessage))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
@@ -707,7 +700,7 @@ struct CityExplorerView: View {
 
     private func highlightedPlace(_ place: CityPlace, title: String, symbol: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
+            Text(L10n.tr(title))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             placeRow(place, symbol: symbol)
@@ -743,8 +736,8 @@ struct CityExplorerView: View {
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(2)
                         if let openNow = place.openNow {
-                            Text(openNow ? "Open now" : "Closed")
-                                .font(.caption2.weight(.semibold))
+                            Text(openNow ? L10n.tr("Open now") : L10n.tr("Closed"))
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(openNow ? .green : .secondary)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -765,7 +758,7 @@ struct CityExplorerView: View {
                 VStack(alignment: .trailing, spacing: 5) {
                     if let distanceLabel = place.distanceLabel {
                         Text(distanceLabel)
-                            .font(.caption2.weight(.semibold))
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                     if let deeplink = place.deeplink {
@@ -773,8 +766,9 @@ struct CityExplorerView: View {
                             Image(systemName: "arrow.up.right.square")
                                 .font(.caption.weight(.semibold))
                         }
-                        .accessibilityLabel("Open \(place.name) in Maps")
-                        .accessibilityHint("Opens external map directions")
+                        .accessibilityTapTarget()
+                        .accessibilityLabel(L10n.f("Open %@ in Maps", place.name))
+                        .accessibilityHint(L10n.tr("Opens external map directions"))
                     }
                 }
             }
@@ -793,7 +787,7 @@ struct CityExplorerView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .font(.caption2.weight(.semibold))
+            .font(.caption.weight(.semibold))
 
             HStack(spacing: 6) {
                 if let placeType = place.placeType, !placeType.isEmpty {
@@ -801,17 +795,17 @@ struct CityExplorerView: View {
                 }
                 Text(place.provider)
             }
-            .font(.caption2.weight(.medium))
+            .font(.caption.weight(.medium))
             .foregroundStyle(.secondary)
             .lineLimit(1)
 
             if let reason = place.personalizationReason, !reason.isEmpty {
                 HStack(spacing: 5) {
                     Image(systemName: "sparkles")
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.accentColor)
                     Text(reason)
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 8)
@@ -840,7 +834,9 @@ struct CityExplorerView: View {
     }
 
     private func feedbackRow(_ entry: TravelerFeedback) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let translatedContent = translatedFeedbackByID[entry.id]
+        let feedbackText = translatedContent?.text.nonEmpty ?? entry.text
+        return VStack(alignment: .leading, spacing: 6) {
             HStack {
                 HStack(spacing: 2) {
                     ForEach(0..<5, id: \.self) { index in
@@ -851,7 +847,7 @@ struct CityExplorerView: View {
                 }
                 Spacer(minLength: 0)
                 Label(entry.sourceType.title, systemImage: entry.sourceType.symbol)
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
@@ -860,7 +856,7 @@ struct CityExplorerView: View {
                     )
             }
 
-            Text(entry.text.isEmpty ? "No written comment." : entry.text)
+            Text(feedbackText.nonEmpty ?? L10n.tr("No written comment."))
                 .font(.subheadline)
                 .lineLimit(3)
 
@@ -878,7 +874,7 @@ struct CityExplorerView: View {
 
     private func detailRow(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(label)
+            Text(L10n.tr(label))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
@@ -898,7 +894,7 @@ struct CityExplorerView: View {
                 Image(systemName: symbol)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(title)
+                Text(L10n.tr(title))
                     .font(.headline)
                 Spacer(minLength: 0)
             }
@@ -915,9 +911,9 @@ struct CityExplorerView: View {
             Image(systemName: "mappin.and.ellipse")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.secondary)
-            Text("Select a city")
+            Text(L10n.tr("Select a city"))
                 .font(.headline)
-            Text("Search a city from the field above or tap anywhere on the map.")
+            Text(L10n.tr("Search a city from the field above or tap anywhere on the map."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -960,8 +956,9 @@ struct CityExplorerView: View {
                 )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Recenter map")
-        .accessibilityHint("Moves map back to \(city.name)")
+        .accessibilityTapTarget()
+        .accessibilityLabel(L10n.tr("Recenter map"))
+        .accessibilityHint(L10n.f("Moves map back to %@", city.name))
     }
 
     private func mapTapGesture(proxy: MapProxy) -> some Gesture {
@@ -989,7 +986,7 @@ struct CityExplorerView: View {
 
             guard let city else {
                 viewModel.isResolvingLocation = false
-                viewModel.statusMessage = "No city found for \"\(trimmed)\"."
+                viewModel.statusMessage = L10n.f("No city found for \"%@\".", trimmed)
                 return
             }
 
@@ -1017,7 +1014,7 @@ struct CityExplorerView: View {
 
             guard let city else {
                 viewModel.isResolvingLocation = false
-                viewModel.statusMessage = "Unable to identify a city at this point."
+                viewModel.statusMessage = L10n.tr("Unable to identify a city at this point.")
                 return
             }
 
@@ -1044,6 +1041,23 @@ struct CityExplorerView: View {
     }
 
     @MainActor
+    private func refreshFeedbackTranslations() async {
+        let inputs = viewModel.feedbackEntries.map {
+            FeedbackTranslationInput(id: $0.id, text: $0.text, tags: $0.tags)
+        }
+        guard !inputs.isEmpty else {
+            translatedFeedbackByID = [:]
+            return
+        }
+
+        translatedFeedbackByID = await bootstrap.feedbackTranslationService.translate(
+            feedbacks: inputs,
+            targetLanguage: L10n.preferredNarrativeLanguage,
+            languageCode: L10n.preferredLanguageCode
+        )
+    }
+
+    @MainActor
     private func presentDetailsPanel() {
         withAnimation(.easeInOut(duration: 0.22)) {
             selectedTab = .forYou
@@ -1062,6 +1076,13 @@ struct CityExplorerView: View {
                 )
             )
         }
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 
@@ -1098,10 +1119,23 @@ private extension View {
 }
 
 #Preview {
-    NavigationStack {
+    let defaults = UserDefaults(suiteName: "preview.cityexplorer") ?? .standard
+    let settingsStore = AppSettingsStore(defaults: defaults)
+    let bootstrap = AppBootstrap(settingsStore: settingsStore)
+    let container = SwiftDataStack.makeContainer(inMemory: true)
+    let context = container.mainContext
+    bootstrap.prepare(context: context)
+
+    let homeViewModel = HomeViewModel()
+    homeViewModel.load(context: context, bootstrap: bootstrap)
+    let viewModel = CityExplorerViewModel()
+
+    return NavigationStack {
         CityExplorerView(
-            homeViewModel: HomeViewModel(),
-            viewModel: CityExplorerViewModel()
+            homeViewModel: homeViewModel,
+            viewModel: viewModel
         )
     }
+    .environment(bootstrap)
+    .modelContainer(container)
 }

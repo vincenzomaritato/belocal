@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 @main
-struct WaypointApp: App {
+struct BeLocalApp: App {
     @State private var bootstrap = AppBootstrap()
 
     private let container = SwiftDataStack.makeContainer()

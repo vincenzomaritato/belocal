@@ -13,11 +13,11 @@ enum OpenAIChatServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "OPENAI_API_KEY is not configured."
+            return L10n.tr("OPENAI_API_KEY is not configured.")
         case .httpStatus(let code, let message):
-            return "OpenAI API error (\(code)): \(message)"
+            return L10n.f("OpenAI API error (%d): %@", code, message)
         case .invalidResponse:
-            return "Invalid OpenAI response."
+            return L10n.tr("Invalid OpenAI response.")
         }
     }
 }
@@ -34,14 +34,17 @@ protocol OpenAIChatServing {
 struct OpenAIChatService: OpenAIChatServing {
     let config: TravelAPIConfig
     let session: URLSession
-    private let assistantInstructions = """
-    You are Waypoint, a premium AI travel planner.
-    You can only discuss travel: destinations, itineraries, attractions, logistics, budget, food, safety, seasons, and bookings.
-    If the user asks for non-travel topics, refuse briefly and redirect to travel planning.
-    Respond only in English.
-    Always format responses as valid Markdown (GitHub-flavored) with clear sections.
-    Be concise, practical, and context-aware.
-    """
+
+    private var assistantInstructions: String {
+        """
+        You are BeLocal, a premium AI travel planner.
+        You can only discuss travel: destinations, itineraries, attractions, logistics, budget, food, safety, seasons, and bookings.
+        If the user asks for non-travel topics, refuse briefly and redirect to travel planning.
+        Respond in \(L10n.preferredNarrativeLanguage), matching the app language.
+        Always format responses as valid Markdown (GitHub-flavored) with clear sections.
+        Be concise, practical, and context-aware.
+        """
+    }
 
     init(config: TravelAPIConfig, session: URLSession = .shared) {
         self.config = config

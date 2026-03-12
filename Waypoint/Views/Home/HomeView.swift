@@ -2,6 +2,8 @@ import SwiftData
 import SwiftUI
 
 struct HomeView: View {
+    private static let allStyleFilterKey = "All"
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Environment(AppBootstrap.self) private var bootstrap
@@ -10,7 +12,7 @@ struct HomeView: View {
     var onPlannerSuggestionTap: ((RecommendationItem) -> Void)? = nil
     var onProfileTap: (() -> Void)? = nil
 
-    @State private var selectedStyleFilter = "All"
+    @State private var selectedStyleFilter = HomeView.allStyleFilterKey
     @State private var feedbackViewModel: TripDetailViewModel?
     @State private var showNoTripsAlert = false
     @State private var showAddTripSheet = false
@@ -90,11 +92,11 @@ struct HomeView: View {
             topStyles = Array(merged.prefix(6))
         }
 
-        return ["All"] + topStyles.filter { !$0.isEmpty && $0 != "All" }
+        return [HomeView.allStyleFilterKey] + topStyles.filter { !$0.isEmpty && $0 != HomeView.allStyleFilterKey }
     }
 
     private var filteredRecommendations: [RecommendationItem] {
-        guard selectedStyleFilter != "All" else { return homeViewModel.recommendations }
+        guard selectedStyleFilter != HomeView.allStyleFilterKey else { return homeViewModel.recommendations }
         let selectedKey = styleKey(for: selectedStyleFilter)
         return homeViewModel.recommendations.filter { item in
             item.destination.styles
@@ -107,9 +109,9 @@ struct HomeView: View {
     private var navigationTitleText: String {
         let firstName = homeViewModel.userProfile?.name.split(separator: " ").first.map(String.init)
         if let firstName, !firstName.isEmpty {
-            return "Welcome, \(firstName)"
+            return L10n.f("Welcome, %@", firstName)
         }
-        return "Welcome"
+        return L10n.tr("Welcome")
     }
 
     var body: some View {
@@ -151,21 +153,21 @@ struct HomeView: View {
                         Button {
                             showAddTripSheet = true
                         } label: {
-                            Label("Add Trip", systemImage: "airplane")
+                            Label(L10n.tr("Add Trip"), systemImage: "airplane")
                         }
 
                         Button {
                             startFeedbackFlow()
                         } label: {
-                            Label("Leave Feedback", systemImage: "star.bubble")
+                            Label(L10n.tr("Leave Feedback"), systemImage: "star.bubble")
                         }
                     } label: {
                         Image(systemName: "plus")
                             .font(.headline.weight(.semibold))
                     }
                     .tint(.orange)
-                    .accessibilityLabel("Quick actions")
-                    .accessibilityHint("Open actions to add a trip or leave feedback")
+                    .accessibilityLabel(L10n.tr("Quick actions"))
+                    .accessibilityHint(L10n.tr("Open actions to add a trip or leave feedback"))
                 }
             }
             .refreshable {
@@ -176,7 +178,7 @@ struct HomeView: View {
             }
             .onChange(of: availableStyleFilters) { _, newFilters in
                 guard !newFilters.contains(selectedStyleFilter) else { return }
-                selectedStyleFilter = "All"
+                selectedStyleFilter = HomeView.allStyleFilterKey
             }
             .sheet(isPresented: feedbackSheetBinding) {
                 if let viewModel = feedbackViewModel {
@@ -203,10 +205,10 @@ struct HomeView: View {
                 }
                 .presentationDetents([.large])
             }
-            .alert("No Trips Yet", isPresented: $showNoTripsAlert) {
-                Button("OK", role: .cancel) {}
+            .alert(L10n.tr("No Trips Yet"), isPresented: $showNoTripsAlert) {
+                Button(L10n.tr("OK"), role: .cancel) {}
             } message: {
-                Text("Add a trip first to leave feedback.")
+                Text(L10n.tr("Add a trip first to leave feedback."))
             }
         }
     }
@@ -242,11 +244,11 @@ struct HomeView: View {
         HStack(spacing: 10) {
             Image(systemName: "wifi.slash")
                 .foregroundStyle(.indigo)
-            Text("Offline mode is on. You can keep browsing and save changes locally.")
+            Text(L10n.tr("Offline mode is on. You can keep browsing and save changes locally."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()
-            Button("Go Online") {
+            Button(L10n.tr("Go Online")) {
                 reloadHome(forceOffline: false)
             }
             .buttonStyle(.bordered)
@@ -265,34 +267,45 @@ struct HomeView: View {
     }
 
     private var mapSection: some View {
-        GlassCard {
+        let visitedCount = homeViewModel.visitedCountryCodes.count
+        let plannedCount = homeViewModel.plannedCountryCodes.count
+
+        return GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Visited Footprint")
-                        .font(.headline)
                     Spacer()
-                    Text("\(homeViewModel.visitedCountryCodes.count) countries")
+                    Text(L10n.f("%lld visited · %lld planned", visitedCount, plannedCount))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
 
-                StaticWorldMapView(countryCodes: homeViewModel.visitedCountryCodes)
+                StaticWorldMapView(
+                    visitedCountryCodes: homeViewModel.visitedCountryCodes,
+                    plannedCountryCodes: homeViewModel.plannedCountryCodes
+                )
                     .frame(height: 245)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Visited countries map")
-                    .accessibilityValue("\(homeViewModel.visitedCountryCodes.count) countries visited")
+                    .accessibilityLabel(L10n.tr("Travel countries map"))
+                    .accessibilityValue(L10n.f("%lld visited, %lld planned", visitedCount, plannedCount))
 
-                if homeViewModel.visitedCountryCodes.isEmpty {
-                    Text("Start saving trips to color your world map.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Button("Add your first trip") {
-                        showAddTripSheet = true
-                    }
-                    .buttonStyle(.borderedProminent)
+                HStack(spacing: 14) {
+                    mapLegend(color: Color.orange, label: L10n.tr("Visited"))
+                    mapLegend(color: Color.red, label: L10n.tr("Planned"))
+                    Spacer()
                 }
             }
+        }
+    }
+
+    private func mapLegend(color: Color, label: String) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 9, height: 9)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -312,7 +325,7 @@ struct HomeView: View {
 
     private var tripsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Your Trips")
+            Text(L10n.tr("Your Trips"))
                 .font(.title3.weight(.semibold))
                 .padding(.leading, 2)
 
@@ -321,9 +334,9 @@ struct HomeView: View {
             } else if homeViewModel.trips.isEmpty {
                 EmptyStateCard(
                     icon: "airplane.circle",
-                    title: "No trips yet",
-                    message: "Add your first trip to unlock tailored recommendations and a richer world map.",
-                    primaryActionTitle: "Add Trip",
+                    title: L10n.tr("No trips yet"),
+                    message: L10n.tr("Add your first trip to unlock tailored recommendations and a richer world map."),
+                    primaryActionTitle: L10n.tr("Add Trip"),
                     primaryAction: { showAddTripSheet = true }
                 )
             } else {
@@ -335,7 +348,7 @@ struct HomeView: View {
 
     private var recommendationsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recommended for You")
+            Text(L10n.tr("Recommended for You"))
                 .font(.title3.weight(.semibold))
                 .padding(.leading, 2)
 
@@ -388,7 +401,7 @@ struct HomeView: View {
     private var recommendationsContent: some View {
         if let errorMessage = homeViewModel.errorMessage {
             ActionableErrorCard(
-                title: "Something went wrong",
+                title: L10n.tr("Something went wrong"),
                 message: errorMessage,
                 retryAction: { reloadHome() },
                 offlineAction: { enterOfflineMode() },
@@ -439,13 +452,13 @@ struct HomeView: View {
     private var recommendationsEmptyState: some View {
         EmptyStateCard(
             icon: "sparkles",
-            title: "No recommendations yet",
+            title: L10n.tr("No recommendations yet"),
             message: homeViewModel.trips.isEmpty
-                ? "Add your first trip and we will build suggestions around your profile."
-                : "We need more destination signals to build your next set of ideas.",
-            primaryActionTitle: "Add Trip",
+                ? L10n.tr("Add your first trip and we will build suggestions around your profile.")
+                : L10n.tr("We need more destination signals to build your next set of ideas."),
+            primaryActionTitle: L10n.tr("Add Trip"),
             primaryAction: { showAddTripSheet = true },
-            secondaryActionTitle: "Refresh",
+            secondaryActionTitle: L10n.tr("Refresh"),
             secondaryAction: { reloadHome() }
         )
         .padding(.vertical, 8)
@@ -455,10 +468,10 @@ struct HomeView: View {
     private var filteredEmptyState: some View {
         EmptyStateCard(
             icon: "line.3.horizontal.decrease.circle",
-            title: "No matches for \(selectedStyleFilter)",
-            message: "Try another style filter to see more destinations.",
-            primaryActionTitle: "Reset Filter",
-            primaryAction: { selectedStyleFilter = "All" }
+            title: L10n.f("No matches for %@", localizedFilterLabel(selectedStyleFilter)),
+            message: L10n.tr("Try another style filter to see more destinations."),
+            primaryActionTitle: L10n.tr("Reset Filter"),
+            primaryAction: { selectedStyleFilter = HomeView.allStyleFilterKey }
         )
         .padding(.vertical, 8)
         .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -483,7 +496,7 @@ struct HomeView: View {
                 selectedStyleFilter = style
             }
         } label: {
-            Text(style)
+            Text(localizedFilterLabel(style))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(isSelected ? .white : .primary)
                 .padding(.horizontal, 12)
@@ -507,9 +520,10 @@ struct HomeView: View {
                 )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Filter by \(style)")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint(isSelected ? "Currently selected" : "Double-tap to apply this filter")
+        .accessibilityTapTarget()
+        .accessibilityLabel(L10n.f("Filter by %@", localizedFilterLabel(style)))
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(isSelected ? L10n.tr("Currently selected") : L10n.tr("Double-tap to apply this filter"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -562,8 +576,8 @@ struct HomeView: View {
     }
 
     private func contactSupport(context: String) {
-        let subject = "Waypoint support request"
-        let message = "Context: \(context)\nError: \(homeViewModel.errorMessage ?? "n/a")"
+        let subject = L10n.tr("BeLocal support request")
+        let message = L10n.f("Context: %@\nError: %@", context, homeViewModel.errorMessage ?? L10n.tr("n/a"))
         guard let url = SupportContact.emailURL(subject: subject, body: message) else { return }
         openURL(url)
     }
@@ -582,14 +596,18 @@ struct HomeView: View {
             .split(separator: " ")
             .map { word in
                 let lower = word.lowercased()
-                if lower == "urban" { return "Urban" }
-                if lower == "food" { return "Food" }
-                if lower == "beach" { return "Beach" }
-                if lower == "nature" { return "Nature" }
-                if lower == "culture" { return "Culture" }
-                return lower.capitalized
+                if lower == "urban" { return L10n.style("Urban") }
+                if lower == "food" { return L10n.style("Food") }
+                if lower == "beach" { return L10n.style("Beach") }
+                if lower == "nature" { return L10n.style("Nature") }
+                if lower == "culture" { return L10n.style("Culture") }
+                return L10n.style(lower.capitalized)
             }
             .joined(separator: " ")
+    }
+
+    private func localizedFilterLabel(_ style: String) -> String {
+        style == HomeView.allStyleFilterKey || style == L10n.tr("All") ? L10n.tr("All") : style
     }
 
 }

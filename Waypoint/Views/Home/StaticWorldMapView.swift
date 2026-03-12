@@ -3,7 +3,8 @@ import SwiftUI
 import WebKit
 
 struct StaticWorldMapView: UIViewRepresentable {
-    let countryCodes: [String]
+    let visitedCountryCodes: [String]
+    let plannedCountryCodes: [String]
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -24,13 +25,19 @@ struct StaticWorldMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        let normalizedCodes = countryCodes
+        let normalizedVisitedCodes = visitedCountryCodes
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
             .filter { $0.range(of: "^[A-Z]{2}$", options: .regularExpression) != nil }
             .sorted()
+        let visitedCodeSet = Set(normalizedVisitedCodes)
+        let normalizedPlannedCodes = plannedCountryCodes
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+            .filter { $0.range(of: "^[A-Z]{2}$", options: .regularExpression) != nil }
+            .filter { !visitedCodeSet.contains($0) }
+            .sorted()
 
         let renderVersion = "svg-raw-v1"
-        let cacheKey = renderVersion + "|" + normalizedCodes.joined(separator: ",")
+        let cacheKey = renderVersion + "|visited=" + normalizedVisitedCodes.joined(separator: ",") + "|planned=" + normalizedPlannedCodes.joined(separator: ",")
         guard cacheKey != context.coordinator.lastRenderedKey else { return }
         context.coordinator.lastRenderedKey = cacheKey
 
@@ -41,23 +48,30 @@ struct StaticWorldMapView: UIViewRepresentable {
         }
 
         let normalizedSVG = normalizedRootSVG(rawSVG)
-        webView.loadHTMLString(htmlWrapper(svg: normalizedSVG, highlightedCodes: normalizedCodes), baseURL: nil)
+        webView.loadHTMLString(
+            htmlWrapper(
+                svg: normalizedSVG,
+                visitedCodes: normalizedVisitedCodes,
+                plannedCodes: normalizedPlannedCodes
+            ),
+            baseURL: nil
+        )
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
-    private func visitedRule(for highlightedCodes: [String]) -> String {
+    private func highlightRule(for highlightedCodes: [String], fillVariable: String, strokeVariable: String, shadowVariable: String) -> String {
         guard !highlightedCodes.isEmpty else { return "" }
         let selectors = highlightedCodes.map { "svg path#\($0)" }.joined(separator: ", ")
         return """
         \(selectors) {
-          fill: var(--visited-fill) !important;
-          stroke: var(--visited-stroke) !important;
+          fill: var(\(fillVariable)) !important;
+          stroke: var(\(strokeVariable)) !important;
           stroke-width: 1.6 !important;
           opacity: 1 !important;
-          filter: drop-shadow(0 0 4px var(--visited-shadow));
+          filter: drop-shadow(0 0 4px var(\(shadowVariable)));
         }
         """
     }
@@ -94,8 +108,19 @@ struct StaticWorldMapView: UIViewRepresentable {
         return Double(svg[range])
     }
 
-    private func htmlWrapper(svg: String, highlightedCodes: [String]) -> String {
-        let visitedCSS = visitedRule(for: highlightedCodes)
+    private func htmlWrapper(svg: String, visitedCodes: [String], plannedCodes: [String]) -> String {
+        let plannedCSS = highlightRule(
+            for: plannedCodes,
+            fillVariable: "--planned-fill",
+            strokeVariable: "--planned-stroke",
+            shadowVariable: "--planned-shadow"
+        )
+        let visitedCSS = highlightRule(
+            for: visitedCodes,
+            fillVariable: "--visited-fill",
+            strokeVariable: "--visited-stroke",
+            shadowVariable: "--visited-shadow"
+        )
 
         return """
         <!doctype html>
@@ -110,6 +135,9 @@ struct StaticWorldMapView: UIViewRepresentable {
               --visited-fill: #ff9500;
               --visited-stroke: #dc6803;
               --visited-shadow: rgba(255, 149, 0, 0.65);
+              --planned-fill: #ff453a;
+              --planned-stroke: #d70015;
+              --planned-shadow: rgba(255, 69, 58, 0.58);
             }
 
             html, body {
@@ -147,6 +175,7 @@ struct StaticWorldMapView: UIViewRepresentable {
               shape-rendering: geometricPrecision;
             }
 
+            \(plannedCSS)
             \(visitedCSS)
 
             @media (prefers-color-scheme: dark) {
@@ -156,6 +185,9 @@ struct StaticWorldMapView: UIViewRepresentable {
                 --visited-fill: #ffb347;
                 --visited-stroke: #ff9500;
                 --visited-shadow: rgba(255, 179, 71, 0.85);
+                --planned-fill: #ff6961;
+                --planned-stroke: #ff453a;
+                --planned-shadow: rgba(255, 105, 97, 0.8);
               }
             }
           </style>
@@ -199,7 +231,10 @@ struct StaticWorldMapView: UIViewRepresentable {
 }
 
 #Preview {
-    StaticWorldMapView(countryCodes: ["US", "PT", "JP"])
+    StaticWorldMapView(
+        visitedCountryCodes: ["US", "PT", "JP"],
+        plannedCountryCodes: ["IS", "AR"]
+    )
         .frame(height: 240)
         .padding()
         .background(PlannerBackgroundView())

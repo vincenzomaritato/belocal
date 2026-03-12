@@ -25,15 +25,15 @@ enum SyncBannerKind: Equatable {
     var title: String {
         switch self {
         case .queued(let count):
-            return count == 1 ? "1 change in queue" : "\(count) changes in queue"
+            return count == 1 ? L10n.tr("1 change in queue") : L10n.f("%d changes in queue", count)
         case .syncing(let count):
-            return count == 1 ? "Syncing 1 change" : "Syncing \(count) changes"
+            return count == 1 ? L10n.tr("Syncing 1 change") : L10n.f("Syncing %d changes", count)
         case .synced:
-            return "All changes synced"
+            return L10n.tr("All changes synced")
         case .failed(let count):
-            return count == 1 ? "1 sync error" : "\(count) sync errors"
+            return count == 1 ? L10n.tr("1 sync error") : L10n.f("%d sync errors", count)
         case .offline:
-            return "Offline mode enabled"
+            return L10n.tr("Offline mode enabled")
         }
     }
 
@@ -107,13 +107,13 @@ struct ActionableErrorCard: View {
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 10) {
-                    Button("Try Again", action: retryAction)
+                    Button(L10n.tr("Try Again"), action: retryAction)
                         .buttonStyle(.borderedProminent)
 
-                    Button("Work Offline", action: offlineAction)
+                    Button(L10n.tr("Work Offline"), action: offlineAction)
                         .buttonStyle(.bordered)
 
-                    Button("Contact Support", action: supportAction)
+                    Button(L10n.tr("Contact Support"), action: supportAction)
                         .buttonStyle(.bordered)
                 }
             }
@@ -170,6 +170,6 @@ enum SupportContact {
     static func emailURL(subject: String, body: String) -> URL? {
         let escapedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let escapedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        return URL(string: "mailto:support@apollo.com?subject=\(escapedSubject)&body=\(escapedBody)")
+        return URL(string: "mailto:support@belocal.app?subject=\(escapedSubject)&body=\(escapedBody)")
     }
 }

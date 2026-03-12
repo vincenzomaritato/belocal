@@ -6,6 +6,7 @@ import SwiftUI
 struct OnboardingFlowView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppBootstrap.self) private var bootstrap
+    @Environment(\.colorScheme) private var colorScheme
 
     @Bindable var homeViewModel: HomeViewModel
     let onCompleted: () -> Void
@@ -21,9 +22,9 @@ struct OnboardingFlowView: View {
     @State private var stylePreset: SettingsViewModel.StylePreset = .balanced
     @State private var ecoPreset: SettingsViewModel.EcoPreset = .balanced
 
-    @State private var homeLocationLabel = "Rome, Italy"
-    @State private var homeCity = "Rome"
-    @State private var homeCountry = "Italy"
+    @State private var homeLocationLabel = L10n.tr("Not set")
+    @State private var homeCity = ""
+    @State private var homeCountry = ""
     @State private var homeLatitude = TravelDistanceCalculator.defaultHomeLatitude
     @State private var homeLongitude = TravelDistanceCalculator.defaultHomeLongitude
     @State private var homeSearchQuery = ""
@@ -48,29 +49,63 @@ struct OnboardingFlowView: View {
 
         var title: String {
             switch self {
-            case .identity: return "Profile"
-            case .home: return "Departure city"
-            case .budget: return "Budget"
-            case .seasons: return "Seasons"
-            case .style: return "Travel style"
-            case .sustainability: return "Sustainability"
+            case .identity:
+                return L10n.tr("Create your travel profile")
+            case .home:
+                return L10n.tr("Set your departure city")
+            case .budget:
+                return L10n.tr("Choose your budget rhythm")
+            case .seasons:
+                return L10n.tr("Pick your favorite travel moments")
+            case .style:
+                return L10n.tr("Shape the kind of trips you want")
+            case .sustainability:
+                return L10n.tr("Finalize your preferences")
             }
         }
 
         var subtitle: String {
             switch self {
             case .identity:
-                return "Let's define who you are and how many people you usually travel with."
+                return L10n.tr("A few answers are enough to make recommendations feel personal from the first search.")
             case .home:
-                return "We'll use your home base to estimate distance and environmental impact."
+                return L10n.tr("We use your base city to calculate distance, relevance, and perspective in the app.")
             case .budget:
-                return "Pick a budget range for more accurate recommendations."
+                return L10n.tr("This keeps suggestions realistic instead of aspirational.")
             case .seasons:
-                return "Tell us when you prefer to travel during the year."
+                return L10n.tr("Seasonality helps us surface destinations when they actually fit your timing.")
             case .style:
-                return "Set the editorial direction for your suggestions."
+                return L10n.tr("Tell us what kind of experience should lead the selection.")
             case .sustainability:
-                return "Final step: sustainability priority and profile summary."
+                return L10n.tr("One last choice, then we save everything and unlock your personalized feed.")
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .identity: return "person.crop.circle"
+            case .home: return "location.circle"
+            case .budget: return "creditcard.circle"
+            case .seasons: return "calendar.circle"
+            case .style: return "sparkles"
+            case .sustainability: return "leaf.circle"
+            }
+        }
+
+        var prompt: String {
+            switch self {
+            case .identity:
+                return L10n.tr("How should BeLocal introduce you?")
+            case .home:
+                return L10n.tr("Where do you usually start your trips?")
+            case .budget:
+                return L10n.tr("What budget range feels natural for you?")
+            case .seasons:
+                return L10n.tr("When do you most enjoy traveling?")
+            case .style:
+                return L10n.tr("What should be prioritized in your recommendations?")
+            case .sustainability:
+                return L10n.tr("How much weight should sustainability have?")
             }
         }
     }
@@ -80,46 +115,79 @@ struct OnboardingFlowView: View {
         case backward
     }
 
+    private var accent: Color {
+        .accentColor
+    }
+
+    private var accentSoft: Color {
+        accent.opacity(0.12)
+    }
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? .white : .black
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.64) : Color.black.opacity(0.56)
+    }
+
+    private var pageGradient: [Color] {
+        if isDarkMode {
+            return [
+                Color(red: 0.08, green: 0.09, blue: 0.11),
+                Color(red: 0.09, green: 0.10, blue: 0.13),
+                Color(red: 0.07, green: 0.10, blue: 0.13)
+            ]
+        }
+
+        return [
+            Color(red: 0.95, green: 0.96, blue: 0.97),
+            Color(red: 0.93, green: 0.95, blue: 0.97),
+            Color(red: 0.92, green: 0.95, blue: 0.97)
+        ]
+    }
+
+    private var sheetBackground: Color {
+        isDarkMode ? Color(red: 0.10, green: 0.11, blue: 0.14) : Color(red: 0.99, green: 0.99, blue: 0.99)
+    }
+
+    private var surfaceFill: Color {
+        isDarkMode ? Color.white.opacity(0.06) : Color.white
+    }
+
+    private var softFill: Color {
+        isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03)
+    }
+
+    private var borderColor: Color {
+        isDarkMode ? Color.white.opacity(0.14) : Color.black.opacity(0.08)
+    }
+
     var body: some View {
-        ZStack {
-            AuthBackgroundView()
-            onboardingMotionLayer
+        GeometryReader { proxy in
+            ZStack {
+                onboardingBackground
+                onboardingMotionLayer(size: proxy.size)
 
-            VStack(spacing: 0) {
-                header
+                VStack(spacing: 0) {
+                    Spacer(minLength: max(54, proxy.size.height * 0.08))
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        ZStack {
-                            currentStepView
-                                .id(currentStep)
-                                .transition(stepTransition)
-                        }
-                        .animation(
-                            .spring(response: 0.44, dampingFraction: 0.9, blendDuration: 0.15),
-                            value: currentStep
-                        )
+                    onboardingHero
+                        .padding(.bottom, 28)
+                        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: currentStep.rawValue)
 
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 4)
-                        }
-                    }
-                    .frame(maxWidth: 640)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    .padding(.bottom, 120)
-                    .frame(maxWidth: .infinity)
+                    onboardingSheet
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, max(20, proxy.safeAreaInsets.bottom + 10))
                 }
             }
         }
-        .tint(.blue)
-        .safeAreaInset(edge: .bottom) {
-            bottomActions
-        }
+        .ignoresSafeArea()
+        .tint(accent)
         .task {
             loadDraftIfNeeded()
         }
@@ -128,86 +196,148 @@ struct OnboardingFlowView: View {
         }
     }
 
-    private var onboardingMotionLayer: some View {
-        let stepFactor = CGFloat(currentStep.rawValue)
+    private var onboardingBackground: some View {
+        LinearGradient(
+            colors: pageGradient,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private func onboardingMotionLayer(size: CGSize) -> some View {
+        let factor = CGFloat(currentStep.rawValue)
 
         return ZStack {
             Circle()
-                .fill(Color.blue.opacity(0.09))
-                .frame(width: 250, height: 250)
-                .blur(radius: 26)
-                .offset(x: 120 - (stepFactor * 9), y: -210 + (stepFactor * 12))
-                .scaleEffect(stepDirection == .forward ? 1.015 : 0.985)
+                .fill(isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.7))
+                .frame(width: size.width * 0.92, height: size.width * 0.92)
+                .blur(radius: 34)
+                .offset(x: 24 - (factor * 10), y: -size.height * 0.2)
 
             Circle()
-                .fill(Color.teal.opacity(0.08))
-                .frame(width: 230, height: 230)
+                .fill(accent.opacity(0.1))
+                .frame(width: size.width * 0.54, height: size.width * 0.54)
                 .blur(radius: 28)
-                .offset(x: -120 + (stepFactor * 8), y: 250 - (stepFactor * 10))
-                .scaleEffect(stepDirection == .forward ? 0.985 : 1.015)
+                .offset(x: -72 + (factor * 8), y: 12 + (factor * 10))
+
+            Circle()
+                .fill(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.04))
+                .frame(width: size.width * 0.42, height: size.width * 0.42)
+                .blur(radius: 24)
+                .offset(x: 92 - (factor * 12), y: size.height * 0.16)
         }
-        .animation(.easeInOut(duration: 0.48), value: currentStep)
+        .animation(.easeInOut(duration: 0.42), value: currentStep.rawValue)
         .allowsHitTesting(false)
+    }
+
+    private var onboardingHero: some View {
+        ZStack {
+            Circle()
+                .fill(accent)
+                .frame(width: 60, height: 60)
+                .offset(x: -12, y: -4)
+
+            Circle()
+                .fill(surfaceFill)
+                .frame(width: 74, height: 74)
+                .shadow(color: .black.opacity(0.06), radius: 18, x: 0, y: 10)
+
+            Image(systemName: currentStep.symbol)
+                .font(.system(size: 31, weight: .semibold))
+                .foregroundStyle(accent)
+                .contentTransition(.symbolEffect(.replace))
+        }
+    }
+
+    private var onboardingSheet: some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    sheetHeader
+
+                    ZStack {
+                        currentStepView
+                            .id(currentStep)
+                            .transition(stepTransition)
+                    }
+                    .animation(.spring(response: 0.4, dampingFraction: 0.88), value: currentStep)
+                    .padding(.top, 24)
+
+                    if let errorMessage {
+                        errorBanner(errorMessage)
+                            .padding(.top, 18)
+                    }
+                }
+                .frame(maxWidth: 620)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 26)
+            }
+            .scrollDismissesKeyboard(.interactively)
+
+            bottomActions
+                .frame(maxWidth: 620)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var sheetHeader: some View {
+        VStack(spacing: 18) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.tr("Personal onboarding"))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(L10n.f("Step %d of %d", currentStep.rawValue + 1, Step.allCases.count))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
+
+                Spacer(minLength: 0)
+
+                progressRail
+                    .frame(width: 132)
+            }
+
+            VStack(spacing: 10) {
+                Text(currentStep.title)
+                    .font(.system(size: 33, weight: .bold))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(primaryText)
+
+                Text(currentStep.subtitle)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 360)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var progressRail: some View {
+        HStack(spacing: 8) {
+            ForEach(Step.allCases) { step in
+                Capsule(style: .continuous)
+                    .fill(step.rawValue <= currentStep.rawValue ? accent : (isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.08)))
+                    .frame(height: 8)
+            }
+        }
     }
 
     private var stepTransition: AnyTransition {
         switch stepDirection {
         case .forward:
             return .asymmetric(
-                insertion: .move(edge: .trailing)
-                    .combined(with: .opacity)
-                    .combined(with: .scale(scale: 0.95, anchor: .trailing)),
-                removal: .move(edge: .leading)
-                    .combined(with: .opacity)
-                    .combined(with: .scale(scale: 1.03, anchor: .leading))
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
             )
         case .backward:
             return .asymmetric(
-                insertion: .move(edge: .leading)
-                    .combined(with: .opacity)
-                    .combined(with: .scale(scale: 0.95, anchor: .leading)),
-                removal: .move(edge: .trailing)
-                    .combined(with: .opacity)
-                    .combined(with: .scale(scale: 1.03, anchor: .trailing))
+                insertion: .move(edge: .leading).combined(with: .opacity),
+                removal: .move(edge: .trailing).combined(with: .opacity)
             )
         }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "person.crop.circle.badge.checkmark")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.blue)
-                    .padding(8)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .accessibilityHidden(true)
-                Text("Set up Waypoint")
-                    .font(.title3.weight(.semibold))
-            }
-
-            Text(currentStep.subtitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            ProgressView(value: Double(currentStep.rawValue + 1), total: Double(Step.allCases.count))
-                .progressViewStyle(.linear)
-                .tint(.blue)
-
-            HStack {
-                Text("Step \(currentStep.rawValue + 1) of \(Step.allCases.count)")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(currentStep.title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.primary)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
-        .background(.ultraThinMaterial)
     }
 
     @ViewBuilder
@@ -229,157 +359,174 @@ struct OnboardingFlowView: View {
     }
 
     private var identityStep: some View {
-        OnboardingCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("What should we call you?")
-                    .font(.headline)
+        AssistantStepCard(prompt: currentStep.prompt) {
+            VStack(alignment: .leading, spacing: 22) {
+                OnboardingInputField(
+                    icon: "person",
+                    prompt: L10n.tr("Your name"),
+                    text: $profileName
+                )
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
 
-                TextField("e.g. Alex", text: $profileName)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .accessibilityLabel("Name")
-                    .accessibilityHint("Enter the name used for your travel profile")
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 11)
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(L10n.tr("How many people usually travel with you?"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+
+                    HStack(spacing: 14) {
+                        CounterButton(symbol: "minus") {
+                            peopleDefault = max(1, peopleDefault - 1)
+                        }
+                        .disabled(peopleDefault == 1)
+
+                        VStack(spacing: 4) {
+                            Text("\(peopleDefault)")
+                                .font(.system(size: 34, weight: .bold))
+                                .foregroundStyle(primaryText)
+
+                            Text(
+                                peopleDefault == 1
+                                    ? L10n.tr("Solo by default")
+                                    : L10n.f("%d travelers per trip", peopleDefault)
+                            )
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        CounterButton(symbol: "plus") {
+                            peopleDefault = min(10, peopleDefault + 1)
+                        }
+                        .disabled(peopleDefault == 10)
+                    }
+                    .padding(16)
                     .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color(uiColor: .secondarySystemBackground).opacity(0.92))
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(surfaceFill)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .strokeBorder(borderColor, lineWidth: 1)
                     )
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Travelers per trip")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Text("\(peopleDefault)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.blue)
-                    }
-
-                    Stepper(value: $peopleDefault, in: 1...10) {
-                        Text(peopleDefault == 1 ? "You usually travel solo" : "You usually travel with \(peopleDefault)")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
                 }
+
+                AssistantInsightRow(
+                    icon: "sparkles",
+                    text: L10n.tr("This makes greetings, recommendations, and trip planning immediately more relevant.")
+                )
             }
         }
     }
 
     private var homeStep: some View {
-        OnboardingCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Where do you usually depart from?")
-                    .font(.headline)
-
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                    TextField("Search a city", text: $homeSearchQuery)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .accessibilityLabel("Search departure city")
-                        .accessibilityHint("Type a city and select one result")
-                        .onChange(of: homeSearchQuery) { _, newValue in
-                            scheduleHomeSearch(for: newValue)
-                        }
+        AssistantStepCard(prompt: currentStep.prompt) {
+            VStack(alignment: .leading, spacing: 18) {
+                OnboardingInputField(
+                    icon: "magnifyingglass",
+                    prompt: L10n.tr("Search a city"),
+                    text: $homeSearchQuery
+                )
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .onChange(of: homeSearchQuery) { _, newValue in
+                    scheduleHomeSearch(for: newValue)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 11)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(uiColor: .secondarySystemBackground).opacity(0.92))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                )
 
                 if isSearchingCity {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         ProgressView()
-                        Text("Searching")
-                            .font(.footnote)
+                        Text(L10n.tr("Searching places"))
+                            .font(.footnote.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 if !homeSearchResults.isEmpty {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         ForEach(homeSearchResults) { result in
                             Button {
                                 applyHomeLocation(result)
                             } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 3) {
                                         Text(result.title)
-                                            .foregroundStyle(.primary)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(primaryText)
                                         Text(result.subtitle)
                                             .font(.footnote)
                                             .foregroundStyle(.secondary)
                                     }
-                                    Spacer()
+
+                                    Spacer(minLength: 0)
+
                                     if homeLocationLabel == result.fullLabel {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(.blue)
+                                            .font(.title3)
+                                            .foregroundStyle(accent)
                                     }
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 9)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .fill(surfaceFill)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .strokeBorder(
+                                            homeLocationLabel == result.fullLabel ? accent.opacity(0.38) : borderColor,
+                                            lineWidth: 1
+                                        )
                                 )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Set departure city to \(result.fullLabel)")
-                            .accessibilityAddTraits(homeLocationLabel == result.fullLabel ? .isSelected : [])
                         }
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Selected location")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(L10n.tr("Selected departure city"))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
+
                     Text(homeLocationLabel)
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(primaryText)
+
+                    Text(
+                        homeLocationLabel == L10n.tr("Not set")
+                            ? L10n.tr("Set a departure city to personalize local versus traveler feedback.")
+                            : L10n.f("We will frame feedback as Local in %@ and Traveler elsewhere.", homeLocationLabel)
+                    )
+                        .font(.footnote)
+                        .foregroundStyle(secondaryText)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
+                .padding(18)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.blue.opacity(0.11))
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(accentSoft)
                 )
-
-                Text("This sets your feedback perspective: Local in \(homeLocationLabel), Traveler in other destinations.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .strokeBorder(accent.opacity(0.18), lineWidth: 1)
+                )
             }
         }
     }
 
     private var budgetStep: some View {
-        OnboardingCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("What's your typical budget per trip?")
-                    .font(.headline)
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(SettingsViewModel.BudgetPreset.allCases) { preset in
-                        SelectableCard(
-                            isSelected: budgetPreset == preset,
-                            title: preset.title,
-                            subtitle: preset.subtitle,
-                            icon: budgetIcon(for: preset)
-                        ) {
-                            budgetPreset = preset
-                        }
+        AssistantStepCard(prompt: currentStep.prompt) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(SettingsViewModel.BudgetPreset.allCases) { preset in
+                    AssistantSelectionCard(
+                        isSelected: budgetPreset == preset,
+                        title: preset.title,
+                        subtitle: preset.subtitle,
+                        icon: budgetIcon(for: preset)
+                    ) {
+                        budgetPreset = preset
                     }
                 }
             }
@@ -387,14 +534,11 @@ struct OnboardingFlowView: View {
     }
 
     private var seasonsStep: some View {
-        OnboardingCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("When do you prefer to travel?")
-                    .font(.headline)
-
+        AssistantStepCard(prompt: currentStep.prompt) {
+            VStack(alignment: .leading, spacing: 16) {
                 FlexibleChipWrap(items: seasons) { season in
-                    SelectableChip(
-                        title: season,
+                    AssistantChip(
+                        title: L10n.season(season),
                         isSelected: selectedSeasons.contains(season)
                     ) {
                         if selectedSeasons.contains(season) {
@@ -405,133 +549,146 @@ struct OnboardingFlowView: View {
                     }
                 }
 
-                Text(selectedSeasons.isEmpty ? "Select at least one season." : "Selected: \(selectedSeasons.sorted().joined(separator: ", "))")
-                    .font(.footnote)
-                    .foregroundStyle(selectedSeasons.isEmpty ? .red : .secondary)
+                Text(
+                    selectedSeasons.isEmpty
+                        ? L10n.tr("Select at least one season to continue.")
+                        : L10n.f("Selected: %@", selectedSeasons.sorted().map(L10n.season).joined(separator: ", "))
+                )
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(selectedSeasons.isEmpty ? Color.red : .secondary)
             }
         }
     }
 
     private var styleStep: some View {
-        OnboardingCard {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("What kind of experience are you looking for?")
-                    .font(.headline)
-
+        AssistantStepCard(prompt: currentStep.prompt) {
+            VStack(spacing: 10) {
                 ForEach(SettingsViewModel.StylePreset.allCases) { preset in
-                    Button {
-                        stylePreset = preset
-                    } label: {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(stylePreset == preset ? Color.blue.opacity(0.2) : Color.primary.opacity(0.08))
-                                Image(systemName: styleIcon(for: preset))
-                                    .foregroundStyle(stylePreset == preset ? .blue : .secondary)
-                            }
-                            .frame(width: 36, height: 36)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(preset.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                Text(styleSubtitle(for: preset))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            if stylePreset == preset {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.blue)
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(stylePreset == preset ? Color.blue.opacity(0.12) : Color(uiColor: .tertiarySystemGroupedBackground))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(preset.title) style")
-                    .accessibilityValue(stylePreset == preset ? "Selected" : "Not selected")
-                    .accessibilityHint(styleSubtitle(for: preset))
-                    .accessibilityAddTraits(stylePreset == preset ? .isSelected : [])
+                    styleOptionRow(preset)
                 }
             }
         }
     }
 
     private var sustainabilityStep: some View {
-        OnboardingCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Sustainability priority")
-                    .font(.headline)
-
-                HStack(spacing: 8) {
+        AssistantStepCard(prompt: currentStep.prompt) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 10) {
                     ForEach(SettingsViewModel.EcoPreset.allCases) { preset in
                         Button {
                             ecoPreset = preset
                         } label: {
-                            VStack(spacing: 4) {
+                            VStack(spacing: 6) {
                                 Text(preset.title)
                                     .font(.subheadline.weight(.semibold))
-                                Text("\(Int((preset.value * 100).rounded()))%")
-                                    .font(.caption)
+                                    .foregroundStyle(ecoPreset == preset ? accent : primaryText)
+
+                                Text(L10n.f("%d%%", Int((preset.value * 100).rounded())))
+                                    .font(.caption.weight(.medium))
                                     .foregroundStyle(.secondary)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 14)
                             .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(ecoPreset == preset ? Color.blue.opacity(0.18) : Color(uiColor: .tertiarySystemGroupedBackground))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(ecoPreset == preset ? Color.blue.opacity(0.45) : Color.clear, lineWidth: 1)
-                            )
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .fill(ecoPreset == preset ? accentSoft : surfaceFill)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .strokeBorder(ecoPreset == preset ? accent.opacity(0.32) : borderColor, lineWidth: 1)
+                                )
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(preset.title) sustainability preference")
-                        .accessibilityValue(ecoPreset == preset ? "Selected" : "Not selected")
-                        .accessibilityHint("\(Int((preset.value * 100).rounded())) percent priority")
+                        .accessibilityLabel(preset.title)
+                        .accessibilityValue(ecoPreset == preset ? L10n.tr("Selected") : L10n.tr("Not selected"))
+                        .accessibilityHint(L10n.f("%d percent sustainability preference", Int((preset.value * 100).rounded())))
                         .accessibilityAddTraits(ecoPreset == preset ? .isSelected : [])
                     }
                 }
 
-                Divider()
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L10n.tr("Profile summary"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Summary")
-                        .font(.subheadline.weight(.bold))
-
-                    summaryRow(label: "Name", value: profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Traveler" : profileName)
-                    summaryRow(label: "Travelers", value: "\(peopleDefault)")
-                    summaryRow(label: "Departure", value: homeLocationLabel)
-                    summaryRow(label: "Budget", value: budgetPreset.subtitle)
-                    summaryRow(label: "Seasons", value: selectedSeasons.sorted().joined(separator: ", "))
-                    summaryRow(label: "Style", value: stylePreset.title)
-                    summaryRow(label: "Eco", value: ecoPreset.title)
+                    VStack(spacing: 12) {
+                        summaryRow(label: L10n.tr("Name"), value: profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.tr("Traveler") : profileName)
+                        summaryRow(label: L10n.tr("Travelers"), value: "\(peopleDefault)")
+                        summaryRow(label: L10n.tr("Departure"), value: homeLocationLabel)
+                        summaryRow(label: L10n.tr("Budget"), value: budgetPreset.subtitle)
+                        summaryRow(label: L10n.tr("Seasons"), value: selectedSeasons.sorted().map(L10n.season).joined(separator: ", "))
+                        summaryRow(label: L10n.tr("Style"), value: stylePreset.title)
+                        summaryRow(label: L10n.tr("Eco"), value: ecoPreset.title)
+                    }
                 }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(surfaceFill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .strokeBorder(borderColor, lineWidth: 1)
+                )
             }
         }
     }
 
-    private var bottomActions: some View {
-        VStack(spacing: 10) {
-            Divider()
+    private func errorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(Color.red)
 
-            HStack(spacing: 10) {
+            Text(message)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.red)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.red.opacity(0.08))
+        )
+    }
+
+    private var bottomActions: some View {
+        VStack(spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(currentStep == .sustainability ? L10n.tr("Ready to save") : L10n.tr("Keep going"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+
+                    Text(
+                        currentStep == .sustainability
+                            ? L10n.tr("We will save your profile and enter the app.")
+                            : L10n.tr("Each answer sharpens your feed, maps, and recommendations.")
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 12) {
                 Button {
                     goBack()
                 } label: {
-                    Text("Back")
-                        .frame(maxWidth: .infinity)
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: 56, height: 56)
+                        .foregroundStyle(primaryText)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .fill(softFill)
+                        )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
+                .accessibilityLabel(L10n.tr("Go back"))
+                .accessibilityHint(L10n.tr("Returns to the previous onboarding step"))
+                .opacity(currentStep == .identity || isSaving ? 0.42 : 1)
                 .disabled(currentStep == .identity || isSaving)
 
                 Button {
@@ -542,19 +699,31 @@ struct OnboardingFlowView: View {
                             ProgressView()
                                 .tint(.white)
                         }
-                        Text(currentStep == .sustainability ? "Complete profile" : "Continue")
-                            .fontWeight(.semibold)
+
+                        Text(currentStep == .sustainability ? L10n.tr("Complete profile") : L10n.tr("Continue"))
+                            .font(.system(size: 18, weight: .semibold))
+
+                        if !isSaving {
+                            Image(systemName: currentStep == .sustainability ? "checkmark" : "arrow.right")
+                                .font(.system(size: 14, weight: .bold))
+                        }
                     }
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(!canProceed || isSaving ? accent.opacity(0.34) : accent)
+                    )
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .buttonStyle(.plain)
+                .accessibilityHint(currentStep == .sustainability ? L10n.tr("Saves your profile and enters the app") : L10n.tr("Moves to the next onboarding step"))
                 .disabled(!canProceed || isSaving)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
         }
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
     }
 
     private var canProceed: Bool {
@@ -594,12 +763,13 @@ struct OnboardingFlowView: View {
         isSaving = true
 
         let resolvedName = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let finalName = resolvedName.isEmpty ? "Traveler" : resolvedName
+        let finalName = resolvedName.isEmpty ? L10n.tr("Traveler") : resolvedName
 
         var profile = homeViewModel.userProfile
         if profile == nil {
             profile = UserProfile(
                 name: finalName,
+                authUserId: bootstrap.settingsStore.authenticatedUserID,
                 homeCity: homeCity,
                 homeCountry: homeCountry,
                 budgetMin: budgetPreset.range.lowerBound,
@@ -617,12 +787,13 @@ struct OnboardingFlowView: View {
         }
 
         guard let profile else {
-            errorMessage = "Unable to prepare your profile."
+            errorMessage = L10n.tr("Unable to prepare your profile.")
             isSaving = false
             return
         }
 
         profile.name = finalName
+        profile.authUserId = bootstrap.settingsStore.authenticatedUserID
         profile.peopleDefault = peopleDefault
         profile.budgetMin = budgetPreset.range.lowerBound
         profile.budgetMax = budgetPreset.range.upperBound
@@ -636,12 +807,34 @@ struct OnboardingFlowView: View {
 
         do {
             try modelContext.save()
+            if bootstrap.supabaseSyncService.config.isConfigured {
+                bootstrap.syncManager.enqueue(
+                    type: .upsertProfile,
+                    payload: [
+                        "profileId": profile.id.uuidString,
+                        "authUserId": bootstrap.settingsStore.authenticatedUserID,
+                        "name": profile.name,
+                        "budgetMin": String(format: "%.0f", profile.budgetMin),
+                        "budgetMax": String(format: "%.0f", profile.budgetMax),
+                        "ecoSensitivity": String(format: "%.3f", profile.ecoSensitivity),
+                        "peopleDefault": "\(profile.peopleDefault)",
+                        "homeLatitude": String(format: "%.6f", profile.homeLatitude),
+                        "homeLongitude": String(format: "%.6f", profile.homeLongitude),
+                        "homeCity": profile.homeCity,
+                        "homeCountry": profile.homeCountry,
+                        "preferredSeasons": profile.preferredSeasons.sorted().joined(separator: ","),
+                        "travelStyleWeightsJSON": profile.travelStyleWeightsJSON,
+                        "updatedAt": ISO8601DateFormatter().string(from: .now)
+                    ],
+                    context: modelContext
+                )
+            }
             bootstrap.settingsStore.completeOnboarding()
             homeViewModel.load(context: modelContext, bootstrap: bootstrap)
             isSaving = false
             onCompleted()
         } catch {
-            errorMessage = "Couldn't save your profile."
+            errorMessage = L10n.tr("Couldn't save your profile.")
             isSaving = false
         }
     }
@@ -685,8 +878,8 @@ struct OnboardingFlowView: View {
 
         homeLatitude = profile.homeLatitude
         homeLongitude = profile.homeLongitude
-        homeCity = profile.homeCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Rome" : profile.homeCity
-        homeCountry = profile.homeCountry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Italy" : profile.homeCountry
+        homeCity = profile.homeCity
+        homeCountry = profile.homeCountry
         homeLocationLabel = defaultHomeLabel(for: profile)
     }
 
@@ -704,15 +897,7 @@ struct OnboardingFlowView: View {
             return textual
         }
 
-        let isDefaultRome =
-            abs(profile.homeLatitude - TravelDistanceCalculator.defaultHomeLatitude) < 0.0001 &&
-            abs(profile.homeLongitude - TravelDistanceCalculator.defaultHomeLongitude) < 0.0001
-
-        if isDefaultRome {
-            return "Rome, Italy"
-        }
-
-        return String(format: "%.2f, %.2f", profile.homeLatitude, profile.homeLongitude)
+        return L10n.tr("Not set")
     }
 
     private func scheduleHomeSearch(for query: String) {
@@ -812,29 +997,85 @@ struct OnboardingFlowView: View {
     private func styleSubtitle(for preset: SettingsViewModel.StylePreset) -> String {
         switch preset {
         case .balanced:
-            return "Balanced mix across culture, food, and outdoor."
+            return L10n.tr("Balanced mix across culture, food, and outdoor.")
         case .culture:
-            return "Museums, heritage, and iconic urban scenes."
+            return L10n.tr("Museums, heritage, and iconic urban scenes.")
         case .food:
-            return "Culinary experiences and authentic local spots."
+            return L10n.tr("Culinary experiences and authentic local spots.")
         case .nature:
-            return "Landscapes, hiking, and green destinations."
+            return L10n.tr("Landscapes, hiking, and green destinations.")
         case .beach:
-            return "Coasts, relaxation, and sea-view rhythm."
+            return L10n.tr("Coasts, relaxation, and sea-view rhythm.")
         }
     }
 
     private func summaryRow(label: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             Text(label)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 76, alignment: .leading)
+                .frame(width: 78, alignment: .leading)
+
             Text(value)
-                .font(.footnote)
-                .foregroundStyle(.primary)
-            Spacer(minLength: 0)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(primaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private func styleOptionRow(_ preset: SettingsViewModel.StylePreset) -> some View {
+        let isSelected = stylePreset == preset
+        let subtitle = styleSubtitle(for: preset)
+
+        return Button {
+            stylePreset = preset
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? accentSoft : softFill)
+
+                    Image(systemName: styleIcon(for: preset))
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isSelected ? accent : .secondary)
+                }
+                .frame(width: 44, height: 44)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(preset.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(accent)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(isSelected ? accentSoft : surfaceFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(isSelected ? accent.opacity(0.34) : borderColor, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(preset.title)
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(subtitle)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -850,93 +1091,239 @@ private struct HomeLocationSearchResult: Identifiable {
     }
 }
 
-private struct SelectableCard: View {
+private struct AssistantStepCard<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let prompt: String
+    let content: Content
+
+    init(prompt: String, @ViewBuilder content: () -> Content) {
+        self.prompt = prompt
+        self.content = content()
+    }
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(prompt)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(isDarkMode ? .white : .black)
+
+            content
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(isDarkMode ? Color.white.opacity(0.04) : Color(red: 0.985, green: 0.985, blue: 0.985))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .strokeBorder(isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+private struct OnboardingInputField: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let icon: String
+    let prompt: String
+    @Binding var text: String
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(isDarkMode ? Color.white.opacity(0.56) : Color.black.opacity(0.52))
+                .frame(width: 22)
+
+            TextField(prompt, text: $text)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(isDarkMode ? .white : .black)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(isDarkMode ? Color.white.opacity(0.06) : Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(isDarkMode ? Color.white.opacity(0.14) : Color.black.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct AssistantSelectionCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let isSelected: Bool
     let title: String
     let subtitle: String
     let icon: String
     let action: () -> Void
 
+    private var accent: Color {
+        .accentColor
+    }
+
+    private var accentSoft: Color {
+        accent.opacity(0.12)
+    }
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.headline)
-                    .foregroundStyle(isSelected ? .blue : .secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isSelected ? accentSoft : (isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.04)))
+
+                    Image(systemName: icon)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isSelected ? accent : .secondary)
+                }
+                .frame(width: 40, height: 40)
+
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(isDarkMode ? .white : .black)
+
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
             }
-            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
-            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 124, alignment: .leading)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isSelected ? Color.blue.opacity(0.12) : Color(uiColor: .tertiarySystemGroupedBackground))
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(isSelected ? accentSoft : (isDarkMode ? Color.white.opacity(0.06) : Color.white))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(isSelected ? Color.blue.opacity(0.45) : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .strokeBorder(isSelected ? accent.opacity(0.34) : (isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.08)), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
         .accessibilityHint(subtitle)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
-private struct SelectableChip: View {
+private struct AssistantChip: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let title: String
     let isSelected: Bool
     let action: () -> Void
+
+    private var accent: Color {
+        .accentColor
+    }
+
+    private var accentSoft: Color {
+        accent.opacity(0.12)
+    }
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
 
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelected ? .blue : .primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
+                .foregroundStyle(isSelected ? accent : (isDarkMode ? .white : .black))
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? Color.blue.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .fill(isSelected ? accentSoft : (isDarkMode ? Color.white.opacity(0.06) : Color.white))
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .strokeBorder(isSelected ? Color.blue.opacity(0.45) : Color.clear, lineWidth: 1)
+                        .strokeBorder(isSelected ? accent.opacity(0.34) : (isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.08)), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityTapTarget()
         .accessibilityLabel(title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Double-tap to toggle this season")
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Double-tap to toggle this preference"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
-private struct OnboardingCard<Content: View>: View {
-    let content: Content
+private struct CounterButton: View {
+    @Environment(\.colorScheme) private var colorScheme
 
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
+    let symbol: String
+    let action: () -> Void
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
     }
 
     var body: some View {
-        content
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 8)
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(isDarkMode ? .white : .black)
+                .frame(width: 48, height: 48)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(isDarkMode ? Color.white.opacity(0.06) : Color.black.opacity(0.05))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct AssistantInsightRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let icon: String
+    let text: String
+
+    private var accent: Color {
+        .accentColor
+    }
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(accent)
+
+            Text(text)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(isDarkMode ? Color.white.opacity(0.64) : Color.black.opacity(0.56))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(isDarkMode ? Color.white.opacity(0.04) : Color.black.opacity(0.03))
+        )
     }
 }
 
@@ -945,9 +1332,9 @@ private struct FlexibleChipWrap<Content: View>: View {
     let content: (String) -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(chunked(items, by: 2), id: \.self) { row in
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(row, id: \.self) { item in
                         content(item)
                     }

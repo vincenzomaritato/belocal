@@ -27,12 +27,12 @@ struct AgentCanvasView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Planning Agent")
+            Text(L10n.tr("Planning Agent"))
                 .font(.headline)
-            Text("Chat-first orchestration")
+            Text(L10n.tr("Chat-first orchestration"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("Use commands like `/flights`, `/activities`, `/save` or write naturally.")
+            Text(L10n.tr("Use commands like `/restaurants`, `/activities`, `/save` or write naturally."))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -59,6 +59,7 @@ struct AgentCanvasView: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityTapTarget()
                 }
             }
         }
@@ -66,15 +67,15 @@ struct AgentCanvasView: View {
 
     private var destinationPicker: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Destination")
+            Text(L10n.tr("Destination"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Picker("Destination", selection: Binding(
+            Picker(L10n.tr("Destination"), selection: Binding(
                 get: { plannerViewModel.draft.destinationId },
                 set: { plannerViewModel.draft.destinationId = $0 }
             )) {
-                Text("Auto (top recommendation)").tag(UUID?.none)
+                Text(L10n.tr("Auto (top recommendation)")).tag(UUID?.none)
                 ForEach(homeViewModel.destinations, id: \.id) { destination in
                     Text("\(destination.name), \(destination.country)").tag(Optional(destination.id))
                 }
@@ -87,21 +88,21 @@ struct AgentCanvasView: View {
         VStack(spacing: 10) {
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Budget")
+                    Text(L10n.tr("Budget"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("€\(Int(plannerViewModel.draft.budget))")
+                    Text(L10n.f("€%d", Int(plannerViewModel.draft.budget)))
                         .font(.subheadline.weight(.semibold))
                 }
                 Slider(value: $plannerViewModel.draft.budget, in: 400...7000, step: 50)
             }
 
             HStack {
-                DatePicker("Start", selection: $plannerViewModel.draft.startDate, displayedComponents: .date)
-                DatePicker("End", selection: $plannerViewModel.draft.endDate, displayedComponents: .date)
+                DatePicker(L10n.tr("Start"), selection: $plannerViewModel.draft.startDate, displayedComponents: .date)
+                DatePicker(L10n.tr("End"), selection: $plannerViewModel.draft.endDate, displayedComponents: .date)
             }
 
-            Stepper("People: \(plannerViewModel.draft.people)", value: $plannerViewModel.draft.people, in: 1...8)
+            Stepper(L10n.f("People: %d", plannerViewModel.draft.people), value: $plannerViewModel.draft.people, in: 1...8)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack {
@@ -112,7 +113,7 @@ struct AgentCanvasView: View {
                                 plannerViewModel.applySuggestion(style)
                             }
                         } label: {
-                            Text(style)
+                            Text(L10n.style(style))
                                 .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
@@ -120,9 +121,10 @@ struct AgentCanvasView: View {
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(style)
-                        .accessibilityValue(selected ? "Selected" : "Not selected")
-                        .accessibilityHint("Adds or removes this style from your plan")
+                        .accessibilityTapTarget()
+                        .accessibilityLabel(L10n.style(style))
+                        .accessibilityValue(selected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+                        .accessibilityHint(L10n.tr("Adds or removes this style from your plan"))
                         .accessibilityAddTraits(selected ? .isSelected : [])
                     }
                 }
@@ -133,11 +135,10 @@ struct AgentCanvasView: View {
     private var suggestionChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
-                actionChip("Find flights")
-                actionChip("Find restaurants")
-                actionChip("Find activities")
-                actionChip("Add a day")
-                actionChip("Save Trip Draft")
+                actionChip(L10n.tr("Find restaurants"))
+                actionChip(L10n.tr("Find activities"))
+                actionChip(L10n.tr("Add a day"))
+                actionChip(L10n.tr("Save Trip Draft"))
             }
         }
     }
@@ -157,10 +158,10 @@ struct AgentCanvasView: View {
 
     private var composerSection: some View {
         HStack {
-            TextField("Type a command or request", text: $plannerViewModel.userMessage)
+            TextField(L10n.tr("Type a command or request"), text: $plannerViewModel.userMessage)
                 .textFieldStyle(.roundedBorder)
 
-            Button("Send") {
+            Button(L10n.tr("Send")) {
                 plannerViewModel.sendMessage(
                     toolRouter: bootstrap.toolRouter,
                     context: modelContext,
@@ -178,26 +179,18 @@ struct AgentCanvasView: View {
                 SkeletonView().frame(height: 74)
             }
 
-            if !plannerViewModel.latestFlights.isEmpty {
-                resultHeader("Flights")
-                ForEach(plannerViewModel.latestFlights, id: \.id) { option in
-                    Text("\(option.airline) • €\(Int(option.price)) • \(option.durationHours, specifier: "%.1f")h")
-                        .font(.caption)
-                }
-            }
-
             if !plannerViewModel.latestRestaurants.isEmpty {
-                resultHeader("Restaurants")
+                resultHeader(L10n.tr("Restaurants"))
                 ForEach(plannerViewModel.latestRestaurants, id: \.id) { option in
-                    Text("\(option.name) • \(option.cuisine) • €\(Int(option.estimatedCost))")
+                    Text(L10n.f("%@ • %@ • €%d", option.name, option.cuisine, Int(option.estimatedCost)))
                         .font(.caption)
                 }
             }
 
             if !plannerViewModel.latestActivities.isEmpty {
-                resultHeader("Activities")
+                resultHeader(L10n.tr("Activities"))
                 ForEach(plannerViewModel.latestActivities, id: \.id) { option in
-                    Text("\(option.title) • \(option.category) • €\(Int(option.estimatedCost))")
+                    Text(L10n.f("%@ • %@ • €%d", option.title, option.category, Int(option.estimatedCost)))
                         .font(.caption)
                 }
             }
@@ -222,6 +215,7 @@ struct AgentCanvasView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityTapTarget()
     }
 
     private func resultHeader(_ title: String) -> some View {

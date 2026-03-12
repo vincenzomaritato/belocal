@@ -82,25 +82,25 @@ enum PlannerSmartAction: String, Identifiable, Hashable, CaseIterable {
     var title: String {
         switch self {
         case .attractions:
-            return "Top attractions"
+            return L10n.tr("Top attractions")
         case .hiddenGems:
-            return "Hidden gems"
+            return L10n.tr("Hidden gems")
         case .foodSpots:
-            return "Food spots"
+            return L10n.tr("Food spots")
         case .familyFriendly:
-            return "Family mode"
+            return L10n.tr("Family mode")
         case .optimizeBudget:
-            return "Optimize budget"
+            return L10n.tr("Optimize budget")
         case .transportTactics:
-            return "Smart transport"
+            return L10n.tr("Smart transport")
         case .rainyBackup:
-            return "Rain backup plan"
+            return L10n.tr("Rain backup plan")
         case .bookingTimeline:
-            return "Booking priorities"
+            return L10n.tr("Booking priorities")
         case .finalizeBrief:
-            return "Finalize brief"
+            return L10n.tr("Finalize brief")
         case .refreshBrief:
-            return "Refresh brief"
+            return L10n.tr("Refresh brief")
         }
     }
 
@@ -212,11 +212,11 @@ enum PlannerAttractionCardAction: Hashable {
     var title: String {
         switch self {
         case .details:
-            return "Details"
+            return L10n.tr("Details")
         case .fitInDayPlan:
-            return "Add to plan"
+            return L10n.tr("Add to plan")
         case .findAlternative:
-            return "Alternative"
+            return L10n.tr("Alternative")
         }
     }
 }
@@ -302,7 +302,8 @@ final class PlannerChatViewModel {
     }
 
     var composerPlaceholder: String {
-        currentQuestion?.placeholder ?? "Ask for variants, alternatives, or money-saving tips..."
+        currentQuestion.map { localizedPlaceholder(for: $0.key) }
+            ?? L10n.tr("Ask for variants, alternatives, or money-saving tips...")
     }
 
     var isBusy: Bool {
@@ -318,8 +319,8 @@ final class PlannerChatViewModel {
             groups.append(
                 PlannerActionGroup(
                     id: "explore",
-                    title: "Explore \(destination)",
-                    subtitle: "Interactive components generated from your context",
+                    title: L10n.f("Explore %@", displayValue(destination, for: .destination)),
+                    subtitle: L10n.tr("Interactive components generated from your context"),
                     actions: [.attractions, .hiddenGems, .foodSpots, .familyFriendly]
                 )
             )
@@ -329,8 +330,8 @@ final class PlannerChatViewModel {
             groups.append(
                 PlannerActionGroup(
                     id: "optimize",
-                    title: "Plan optimization",
-                    subtitle: "Logistics, costs, and fallback options",
+                    title: L10n.tr("Plan optimization"),
+                    subtitle: L10n.tr("Logistics, costs, and fallback options"),
                     actions: [.optimizeBudget, .transportTactics, .rainyBackup, .bookingTimeline]
                 )
             )
@@ -343,8 +344,8 @@ final class PlannerChatViewModel {
         groups.append(
             PlannerActionGroup(
                 id: "brief",
-                title: "Executive brief",
-                subtitle: "Complete final report ready to use",
+                title: L10n.tr("Executive brief"),
+                subtitle: L10n.tr("Complete final report ready to use"),
                 actions: reportActions
             )
         )
@@ -357,9 +358,9 @@ final class PlannerChatViewModel {
             let value = answers[step.key]
             return PlannerSchemaNode(
                 id: step.key,
-                title: step.title,
+                title: localizedQuestionTitle(for: step.key),
                 icon: step.icon,
-                value: value,
+                value: value.map { displayValue($0, for: step.key) },
                 isCompleted: value != nil,
                 isCurrent: currentQuestion?.key == step.key
             )
@@ -369,7 +370,11 @@ final class PlannerChatViewModel {
     var answerSummaries: [PlannerAnswerSummary] {
         questionSteps.compactMap { step in
             guard let value = answers[step.key] else { return nil }
-            return PlannerAnswerSummary(id: step.key, title: shortLabel(for: step.key), value: value)
+            return PlannerAnswerSummary(
+                id: step.key,
+                title: shortLabel(for: step.key),
+                value: displayValue(value, for: step.key)
+            )
         }
     }
 
@@ -473,17 +478,17 @@ final class PlannerChatViewModel {
         messages = [
             PlannerChatMessage(
                 sender: .assistant,
-                text: "Planner Studio active. We will build your trip with a guided canvas: season, days, people, budget, interests, transportation, and activities."
+                text: L10n.tr("Planner Studio active. We will build your trip with a guided canvas: season, days, people, budget, interests, transportation, and activities.")
             ),
             PlannerChatMessage(
                 sender: .assistant,
                 text: """
-                I loaded the recommended suggestion:
-                - Destination: \(prefill.destinationLabel)
-                - Suggested duration: \(prefill.suggestedDays) days
-                - Interests: \(prefill.interestsLabel)
-                - Budget: \(prefill.budgetLabel)
-                - Activity pace: Balanced
+                \(L10n.tr("I loaded the recommended suggestion:"))
+                - \(shortLabel(for: .destination)): \(displayValue(prefill.destinationLabel, for: .destination))
+                - \(L10n.tr("Suggested duration")): \(displayFreeDays(prefill.suggestedDays))
+                - \(shortLabel(for: .interests)): \(displayValue(prefill.interestsLabel, for: .interests))
+                - \(shortLabel(for: .budget)): \(displayValue(prefill.budgetLabel, for: .budget))
+                - \(shortLabel(for: .activities)): \(displayValue("Balanced", for: .activities))
                 """
             )
         ]
@@ -518,7 +523,7 @@ final class PlannerChatViewModel {
 
         if persistedConversation == nil {
             let created = PlannerConversation(
-                title: "New chat",
+                title: L10n.tr("New chat"),
                 createdAt: .now,
                 updatedAt: .now,
                 snapshotJSON: ""
@@ -591,7 +596,7 @@ final class PlannerChatViewModel {
         attraction: PlannerFinalAttraction,
         service: any OpenAIChatServing
     ) async {
-        let destination = answers[.destination] ?? "the selected destination"
+        let destination = answers[.destination] ?? L10n.tr("the selected destination")
         let context = formattedAnswers()
 
         let display: String
@@ -599,7 +604,7 @@ final class PlannerChatViewModel {
 
         switch action {
         case .details:
-            display = "Details about \(attraction.name)"
+            display = L10n.f("Details about %@", attraction.name)
             payload = """
             Planner context:
             \(context)
@@ -618,10 +623,10 @@ final class PlannerChatViewModel {
             - booking strategy
             - nearby food/coffee stop
 
-            Respond in the user's language, concise, polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage), concise, polished Markdown.
             """
         case .fitInDayPlan:
-            display = "Add \(attraction.name) to my plan"
+            display = L10n.f("Add %@ to my plan", attraction.name)
             payload = """
             Planner context:
             \(context)
@@ -638,10 +643,10 @@ final class PlannerChatViewModel {
             - one rain fallback
             - budget impact for that day
 
-            Respond in the user's language, concise, polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage), concise, polished Markdown.
             """
         case .findAlternative:
-            display = "Alternative to \(attraction.name)"
+            display = L10n.f("Alternative to %@", attraction.name)
             payload = """
             Planner context:
             \(context)
@@ -658,7 +663,7 @@ final class PlannerChatViewModel {
             - estimated cost
             - when it is better than the original
 
-            Respond in the user's language, concise, polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage), concise, polished Markdown.
             """
         }
 
@@ -673,16 +678,16 @@ final class PlannerChatViewModel {
     ) {
         guard !isPersistingBrief else { return }
         guard let report = finalReport else {
-            messages.append(.init(sender: .assistant, text: "Generate the Final Trip Brief first, then save it to My Plan."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("Generate the Final Trip Brief first, then save it to My Plan.")))
             return
         }
         guard let profile = homeViewModel.userProfile else {
-            messages.append(.init(sender: .assistant, text: "I cannot save yet because your profile is not available."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("I cannot save yet because your profile is not available.")))
             return
         }
 
         guard let destination = resolveDestination(from: answers[.destination], homeViewModel: homeViewModel) else {
-            messages.append(.init(sender: .assistant, text: "I cannot map this destination to your local catalog. Try selecting a known destination first."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("I cannot map this destination to your local catalog. Try selecting a known destination first.")))
             return
         }
 
@@ -738,7 +743,7 @@ final class PlannerChatViewModel {
                 tripId: trip.id,
                 type: .activity,
                 title: attraction.name,
-                note: "Best: \(attraction.bestTime) • Cost: \(attraction.estimatedCost) • \(attraction.why)"
+                note: L10n.f("Best: %@ • Cost: %@ • %@", attraction.bestTime, attraction.estimatedCost, attraction.why)
             )
             context.insert(item)
             persistedActivities.append(item)
@@ -749,7 +754,7 @@ final class PlannerChatViewModel {
                 tripId: trip.id,
                 type: .activity,
                 title: highlight.day,
-                note: "AM \(highlight.morning) | PM \(highlight.afternoon) | EVE \(highlight.evening) | Rain \(highlight.rainFallback)"
+                note: L10n.f("AM %@ | PM %@ | EVE %@ | Rain %@", highlight.morning, highlight.afternoon, highlight.evening, highlight.rainFallback)
             )
             context.insert(item)
             persistedActivities.append(item)
@@ -759,7 +764,7 @@ final class PlannerChatViewModel {
             let item = ActivityItem(
                 tripId: trip.id,
                 type: .activity,
-                title: "Checklist \(index + 1)",
+                title: L10n.f("Checklist %d", index + 1),
                 note: line
             )
             context.insert(item)
@@ -814,9 +819,9 @@ final class PlannerChatViewModel {
             persistedConversation?.linkedTripId = trip.id
             saveConversationSnapshotIfPossible()
             homeViewModel.load(context: context, bootstrap: bootstrap)
-            messages.append(.init(sender: .assistant, text: "Final Trip Brief saved to My Plan. I created the trip and persisted attractions/checklist as activities."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("Final Trip Brief saved to My Plan. I created the trip and persisted attractions/checklist as activities.")))
         } catch {
-            messages.append(.init(sender: .assistant, text: "Save failed. I could not persist the final brief in local storage."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("Save failed. I could not persist the final brief in local storage.")))
         }
 
         isPersistingBrief = false
@@ -827,7 +832,7 @@ final class PlannerChatViewModel {
         messages = [
             PlannerChatMessage(
                 sender: .assistant,
-                text: "Planner Studio active. We will build your trip with a guided canvas: season, days, people, budget, interests, transportation, and activities."
+                text: L10n.tr("Planner Studio active. We will build your trip with a guided canvas: season, days, people, budget, interests, transportation, and activities.")
             )
         ]
 
@@ -882,7 +887,7 @@ final class PlannerChatViewModel {
         }
 
         stage = .generating
-        messages.append(.init(sender: .assistant, text: "Perfect. I will now create your personalized planner using the full schema."))
+        messages.append(.init(sender: .assistant, text: L10n.tr("Perfect. I will now create your personalized planner using the full schema.")))
         await requestPlanSuggestions(service: service)
         saveConversationSnapshotIfPossible()
     }
@@ -963,7 +968,7 @@ final class PlannerChatViewModel {
             errorMessage = message
             finalizeAssistantMessage(
                 id: assistantMessageID,
-                fallbackText: "I cannot contact the AI service right now. \(message)"
+                fallbackText: L10n.f("I cannot contact the AI service right now. %@", message)
             )
         }
 
@@ -1024,7 +1029,7 @@ final class PlannerChatViewModel {
             "User follow-up request:",
             userText,
             "",
-            "Respond in the user's language with concise and practical recommendations consistent with this context.",
+            "Respond in \(L10n.preferredNarrativeLanguage) with concise and practical recommendations consistent with this context.",
             "Format the response in polished Markdown with headings, bullet points, and compact sections."
         ]
 
@@ -1078,16 +1083,16 @@ final class PlannerChatViewModel {
 
     private func travelScopeGuardrailMessage() -> String {
         """
-        I can only help with travel planning.
+        \(L10n.tr("I can only help with travel planning."))
 
-        We can discuss destinations, itineraries, attractions, budgets, transport, hotels, restaurants, and logistics.
-        Send me a travel-related request and I'll continue right away.
+        \(L10n.tr("We can discuss destinations, itineraries, attractions, budgets, transport, hotels, restaurants, and logistics."))
+        \(L10n.tr("Send me a travel-related request and I'll continue right away."))
         """
     }
 
     private func questionPrompt(for question: PlannerQuestionStep) -> String {
         let number = (questionSteps.firstIndex(of: question) ?? 0) + 1
-        return "[\(number)/\(questionSteps.count)] \(question.title)\n\(question.subtitle)"
+        return "[\(number)/\(questionSteps.count)] \(localizedQuestionTitle(for: question.key))\n\(localizedQuestionSubtitle(for: question.key))"
     }
 
     private func advanceToNextUnansweredStep() {
@@ -1101,25 +1106,26 @@ final class PlannerChatViewModel {
     }
 
     private func acknowledgement(for question: PlannerQuestionStep, answer: String) -> String {
+        let displayAnswer = displayValue(answer, for: question.key)
         switch question.key {
         case .destination:
-            return "Great starting point: \(answer)."
+            return L10n.f("Great starting point: %@.", displayAnswer)
         case .seasonAndDates:
-            return "Timing recorded: \(answer)."
+            return L10n.f("Timing recorded: %@.", displayAnswer)
         case .freeDays:
-            return "Trip duration saved: \(answer)."
+            return L10n.f("Trip duration saved: %@.", displayAnswer)
         case .travelers:
-            return "Group setup saved: \(answer)."
+            return L10n.f("Group setup saved: %@.", displayAnswer)
         case .travelersProfile:
-            return "Age and relationship profile noted: \(answer)."
+            return L10n.f("Age and relationship profile noted: %@.", displayAnswer)
         case .budget:
-            return "Budget range set to \(answer)."
+            return L10n.f("Budget range set to %@.", displayAnswer)
         case .interests:
-            return "Interests saved: \(answer)."
+            return L10n.f("Interests saved: %@.", displayAnswer)
         case .transportation:
-            return "Transportation preference set: \(answer)."
+            return L10n.f("Transportation preference set: %@.", displayAnswer)
         case .activities:
-            return "Activity pace selected: \(answer)."
+            return L10n.f("Activity pace selected: %@.", displayAnswer)
         }
     }
 
@@ -1183,10 +1189,10 @@ final class PlannerChatViewModel {
         let ordered = questionSteps.compactMap { step -> (PlannerQuestionStep.Key, String)? in
             items.first(where: { $0.0 == step.key })
         }
-        let lines = ordered.map { "- \(shortLabel(for: $0.0)): \($0.1)" }
+        let lines = ordered.map { "- \(shortLabel(for: $0.0)): \(displayValue($0.1, for: $0.0))" }
 
         return """
-        I auto-filled these fields from your message:
+        \(L10n.tr("I auto-filled these fields from your message:"))
         \(lines.joined(separator: "\n"))
         """
     }
@@ -1462,7 +1468,7 @@ final class PlannerChatViewModel {
         User profile:
         \(formattedAnswers())
 
-        Produce the best possible travel plan in the user's language with this exact structure:
+        Produce the best possible travel plan in \(L10n.preferredNarrativeLanguage) with this exact structure:
         1) Concept overview (2-3 lines)
         2) Destination strategy (primary + one backup option)
         3) Day-by-day planner with Morning / Afternoon / Evening blocks
@@ -1488,7 +1494,7 @@ final class PlannerChatViewModel {
             \(context)
 
             Request: Create 10 specific attractions for \(destination), grouped by area, with estimated visit duration and best time slot.
-            Respond in the user's language using polished Markdown with concise bullet points.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown with concise bullet points.
             """
         case .hiddenGems:
             return """
@@ -1496,7 +1502,7 @@ final class PlannerChatViewModel {
             \(context)
 
             Request: Provide 7 hidden gems in \(destination) that tourists often miss, each with why it is worth it and a practical access tip.
-            Respond in the user's language using polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .foodSpots:
             return """
@@ -1504,7 +1510,7 @@ final class PlannerChatViewModel {
             \(context)
 
             Request: Build a food map for \(destination) with 8 spots (breakfast, lunch, dinner, dessert, market), budget level, and what to order.
-            Respond in the user's language using polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .familyFriendly:
             return """
@@ -1512,7 +1518,7 @@ final class PlannerChatViewModel {
             \(context)
 
             Request: Adapt the plan for family-friendly execution with kid-friendly attractions, transfer limits, break windows, and safety notes.
-            Respond in the user's language using polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .optimizeBudget:
             return """
@@ -1521,6 +1527,7 @@ final class PlannerChatViewModel {
 
             Request: Optimize this trip budget with concrete savings opportunities and what not to downgrade.
             Return a before/after mini table in Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .transportTactics:
             return """
@@ -1529,7 +1536,7 @@ final class PlannerChatViewModel {
 
             Request: Suggest the smartest transportation strategy for \(destination), including passes, airport transfers, and time-saving combinations.
             Keep tradeoffs explicit and concise.
-            Respond in polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .rainyBackup:
             return """
@@ -1537,7 +1544,7 @@ final class PlannerChatViewModel {
             \(context)
 
             Request: Create a rainy-day backup version of the itinerary with indoor alternatives for each day and relocation time estimates.
-            Respond in polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .bookingTimeline:
             return """
@@ -1546,7 +1553,7 @@ final class PlannerChatViewModel {
 
             Request: Build a booking timeline with deadlines: book now, book this week, and book later.
             Include risk level for each line.
-            Respond in polished Markdown.
+            Respond in \(L10n.preferredNarrativeLanguage) using polished Markdown.
             """
         case .finalizeBrief, .refreshBrief:
             return ""
@@ -1577,7 +1584,7 @@ final class PlannerChatViewModel {
         errorMessage = nil
 
         if isManualRequest {
-            messages.append(.init(sender: .assistant, text: "Generating your final trip brief with attractions, logistics, and checklist."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("Generating your final trip brief with attractions, logistics, and checklist.")))
         }
 
         let rankedLiveAttractions = await fetchRankedLiveAttractions(limit: 8)
@@ -1585,7 +1592,7 @@ final class PlannerChatViewModel {
         if let localReport = await generateLocalFinalReportIfAvailable(liveAttractions: rankedLiveAttractions) {
             finalReport = mergeLiveAttractions(into: localReport, liveAttractions: rankedLiveAttractions)
             hasAutoGeneratedFinalReport = true
-            messages.append(.init(sender: .assistant, text: "Final Trip Brief ready below (generated on-device)."))
+            messages.append(.init(sender: .assistant, text: L10n.tr("Final Trip Brief ready in My Plan (generated on-device).")))
             isGeneratingFinalReport = false
             return
         }
@@ -1600,18 +1607,18 @@ final class PlannerChatViewModel {
             if let report = decodeFinalReport(from: reply.text) {
                 finalReport = mergeLiveAttractions(into: report, liveAttractions: rankedLiveAttractions)
                 hasAutoGeneratedFinalReport = true
-                messages.append(.init(sender: .assistant, text: "Final Trip Brief ready below. You can refresh it anytime from Agent Actions."))
+                messages.append(.init(sender: .assistant, text: L10n.tr("Final Trip Brief ready in My Plan. You can refresh it anytime from Agent Actions.")))
             } else {
                 finalReport = offlineFallbackFinalReport(liveAttractions: rankedLiveAttractions)
                 hasAutoGeneratedFinalReport = true
-                messages.append(.init(sender: .assistant, text: "I generated the brief from your planner context."))
+                messages.append(.init(sender: .assistant, text: L10n.tr("I generated the brief from your planner context. You can open it from My Plan.")))
             }
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             errorMessage = message
             finalReport = offlineFallbackFinalReport(liveAttractions: rankedLiveAttractions)
             hasAutoGeneratedFinalReport = true
-            messages.append(.init(sender: .assistant, text: "I could not reach the AI endpoint, so I prepared an offline final brief. \(message)"))
+            messages.append(.init(sender: .assistant, text: L10n.f("I could not reach the AI endpoint, so I prepared an offline final brief. %@", message)))
         }
 
         isGeneratingFinalReport = false
@@ -1644,7 +1651,7 @@ final class PlannerChatViewModel {
             .map(\.text)
             .joined(separator: "\n\n")
         let liveAttractionsBlock = liveAttractions.isEmpty
-            ? "No live attractions available."
+            ? L10n.tr("No live attractions available.")
             : liveAttractions.enumerated().map { index, item in
                 "\(index + 1). \(item.name) | \(item.bestTime) | \(item.estimatedCost) | \(item.why)"
             }.joined(separator: "\n")
@@ -1681,7 +1688,8 @@ final class PlannerChatViewModel {
         }
 
         Constraints:
-        - language: match the user language from context
+        - language: \(L10n.preferredNarrativeLanguage)
+        - match the user language from context and keep headings natural in that language
         - attractions: 6 to 10
         - dailyHighlights: 3 to 7
         - checklist: 12 to 16 concise actionable lines
@@ -1784,17 +1792,17 @@ final class PlannerChatViewModel {
     private func offlineFallbackFinalReport(
         liveAttractions: [PlannerFinalAttraction]
     ) -> PlannerFinalReport {
-        let destination = answers[.destination] ?? "Your destination"
-        let season = answers[.seasonAndDates] ?? "Flexible dates"
-        let budget = answers[.budget] ?? "Budget not specified"
-        let transport = answers[.transportation] ?? "Mixed transport"
-        let interests = answers[.interests] ?? "Culture + Food"
+        let destination = displayValue(answers[.destination] ?? L10n.tr("Your destination"), for: .destination)
+        let season = answers[.seasonAndDates].map { displayValue($0, for: .seasonAndDates) } ?? L10n.tr("Flexible dates")
+        let budget = answers[.budget].map { displayValue($0, for: .budget) } ?? L10n.tr("Budget not specified")
+        let transport = answers[.transportation].map { displayValue($0, for: .transportation) } ?? L10n.tr("Mixed transport")
+        let interests = answers[.interests].map { displayValue($0, for: .interests) } ?? L10n.tr("Culture + Food")
 
         let attractions = liveAttractions.isEmpty ? fallbackAttractions() : Array(liveAttractions.prefix(10))
 
         return PlannerFinalReport(
-            headline: "Final Trip Brief • \(destination)",
-            overview: "Trip profile built around \(interests), with pacing optimized for practical execution and backup options.",
+            headline: L10n.f("Final Trip Brief • %@", destination),
+            overview: L10n.f("Trip profile built around %@, with pacing optimized for practical execution and backup options.", interests),
             destinationFocus: destination,
             bestTravelWindow: season,
             budgetSnapshot: budget,
@@ -1861,7 +1869,7 @@ final class PlannerChatViewModel {
         return ranked.map { option, score in
             PlannerFinalAttraction(
                 name: option.title,
-                why: "Live ranked \(String(format: "%.2f", score)) • \(readableCategory(option.category)) • aligned with your interests and budget.",
+                why: L10n.f("Live ranked %@ • %@ • aligned with your interests and budget.", String(format: "%.2f", score), readableCategory(option.category)),
                 bestTime: preferredTimeSlot(for: option.category),
                 estimatedCost: "€\(Int(option.estimatedCost))"
             )
@@ -1869,45 +1877,45 @@ final class PlannerChatViewModel {
     }
 
     private func fallbackAttractions() -> [PlannerFinalAttraction] {
-        let destination = answers[.destination] ?? "destination"
-        let interests = answers[.interests] ?? "culture and food"
+        let destination = displayValue(answers[.destination] ?? L10n.tr("destination"), for: .destination)
+        let interests = answers[.interests].map { displayValue($0, for: .interests) } ?? L10n.tr("culture and food")
 
         return [
             PlannerFinalAttraction(
-                name: "Historic center walk",
-                why: "Best orientation of \(destination) with architecture and local rhythm.",
-                bestTime: "Morning",
-                estimatedCost: "Low"
+                name: L10n.tr("Historic center walk"),
+                why: L10n.f("Best orientation of %@ with architecture and local rhythm.", destination),
+                bestTime: L10n.tr("Morning"),
+                estimatedCost: L10n.tr("Low")
             ),
             PlannerFinalAttraction(
-                name: "Signature museum district",
-                why: "High concentration of key landmarks aligned with \(interests).",
-                bestTime: "Late morning",
-                estimatedCost: "Medium"
+                name: L10n.tr("Signature museum district"),
+                why: L10n.f("High concentration of key landmarks aligned with %@.", interests),
+                bestTime: L10n.tr("Late morning"),
+                estimatedCost: L10n.tr("Medium")
             ),
             PlannerFinalAttraction(
-                name: "Local market + food court",
-                why: "Efficient way to taste local specialties and compare prices.",
-                bestTime: "Lunch",
-                estimatedCost: "Low to medium"
+                name: L10n.tr("Local market + food court"),
+                why: L10n.tr("Efficient way to taste local specialties and compare prices."),
+                bestTime: L10n.tr("Lunch"),
+                estimatedCost: L10n.tr("Low to medium")
             ),
             PlannerFinalAttraction(
-                name: "Sunset viewpoint",
-                why: "Low-effort high-impact slot for photos and atmosphere.",
-                bestTime: "Sunset",
-                estimatedCost: "Free"
+                name: L10n.tr("Sunset viewpoint"),
+                why: L10n.tr("Low-effort high-impact slot for photos and atmosphere."),
+                bestTime: L10n.tr("Sunset"),
+                estimatedCost: L10n.tr("Free")
             ),
             PlannerFinalAttraction(
-                name: "Neighborhood evening loop",
-                why: "Adds authentic local life outside peak tourist zones.",
-                bestTime: "Evening",
-                estimatedCost: "Low"
+                name: L10n.tr("Neighborhood evening loop"),
+                why: L10n.tr("Adds authentic local life outside peak tourist zones."),
+                bestTime: L10n.tr("Evening"),
+                estimatedCost: L10n.tr("Low")
             ),
             PlannerFinalAttraction(
-                name: "Rain-proof cultural venue",
-                why: "Protects itinerary quality with indoor fallback.",
-                bestTime: "Anytime",
-                estimatedCost: "Medium"
+                name: L10n.tr("Rain-proof cultural venue"),
+                why: L10n.tr("Protects itinerary quality with indoor fallback."),
+                bestTime: L10n.tr("Anytime"),
+                estimatedCost: L10n.tr("Medium")
             )
         ]
     }
@@ -1915,45 +1923,45 @@ final class PlannerChatViewModel {
     private func fallbackHighlights() -> [PlannerDayHighlight] {
         [
             PlannerDayHighlight(
-                day: "Day 1",
-                morning: "Arrival, hotel check-in, and orientation walk.",
-                afternoon: "Historic district and first anchor attraction.",
-                evening: "Local dinner area and relaxed stroll.",
-                rainFallback: "Indoor museum cluster near city center."
+                day: L10n.tr("Day 1"),
+                morning: L10n.tr("Arrival, hotel check-in, and orientation walk."),
+                afternoon: L10n.tr("Historic district and first anchor attraction."),
+                evening: L10n.tr("Local dinner area and relaxed stroll."),
+                rainFallback: L10n.tr("Indoor museum cluster near city center.")
             ),
             PlannerDayHighlight(
-                day: "Day 2",
-                morning: "Top landmark before crowds.",
-                afternoon: "Food market and neighborhood exploration.",
-                evening: "Viewpoint + signature dinner booking.",
-                rainFallback: "Culinary workshop or covered market route."
+                day: L10n.tr("Day 2"),
+                morning: L10n.tr("Top landmark before crowds."),
+                afternoon: L10n.tr("Food market and neighborhood exploration."),
+                evening: L10n.tr("Viewpoint + signature dinner booking."),
+                rainFallback: L10n.tr("Culinary workshop or covered market route.")
             ),
             PlannerDayHighlight(
-                day: "Day 3",
-                morning: "Secondary attractions or day-trip module.",
-                afternoon: "Shopping and flexible buffer block.",
-                evening: "Last night highlights and packing window.",
-                rainFallback: "Design galleries and café crawl."
+                day: L10n.tr("Day 3"),
+                morning: L10n.tr("Secondary attractions or day-trip module."),
+                afternoon: L10n.tr("Shopping and flexible buffer block."),
+                evening: L10n.tr("Last night highlights and packing window."),
+                rainFallback: L10n.tr("Design galleries and café crawl.")
             )
         ]
     }
 
     private func fallbackChecklist() -> [String] {
         [
-            "Lock transport first, then hotel cancellation-safe option.",
-            "Prebook top 2 attractions with timed entry.",
-            "Reserve one high-value dinner in advance.",
-            "Prepare offline map + emergency meeting point.",
-            "Keep 12-15% budget as contingency buffer.",
-            "Create one indoor backup per day."
+            L10n.tr("Lock transport first, then hotel cancellation-safe option."),
+            L10n.tr("Prebook top 2 attractions with timed entry."),
+            L10n.tr("Reserve one high-value dinner in advance."),
+            L10n.tr("Prepare offline map + emergency meeting point."),
+            L10n.tr("Keep 12-15% budget as contingency buffer."),
+            L10n.tr("Create one indoor backup per day.")
         ]
     }
 
     private func fallbackNotes() -> [String] {
         [
-            "Peak-hour queues can reduce daily throughput.",
-            "Airport-city transfer time varies by traffic window.",
-            "Weather volatility may require swapping day blocks."
+            L10n.tr("Peak-hour queues can reduce daily throughput."),
+            L10n.tr("Airport-city transfer time varies by traffic window."),
+            L10n.tr("Weather volatility may require swapping day blocks.")
         ]
     }
 
@@ -2107,15 +2115,15 @@ final class PlannerChatViewModel {
     private func preferredTimeSlot(for rawCategory: String) -> String {
         let category = rawCategory.lowercased()
         if category.contains("night") || category.contains("bar") {
-            return "Evening"
+            return L10n.tr("Evening")
         }
         if category.contains("museum") || category.contains("gallery") || category.contains("historic") {
-            return "Morning"
+            return L10n.tr("Morning")
         }
         if category.contains("park") || category.contains("nature") {
-            return "Afternoon"
+            return L10n.tr("Afternoon")
         }
-        return "Late morning"
+        return L10n.tr("Late morning")
     }
 
     private func encodedFinalReport(_ report: PlannerFinalReport) -> String? {
@@ -2131,7 +2139,7 @@ final class PlannerChatViewModel {
         }
 
         messages = snapshot.messages.isEmpty
-            ? [PlannerChatMessage(sender: .assistant, text: "Planner Studio active. Continue from your previous session.")]
+            ? [PlannerChatMessage(sender: .assistant, text: L10n.tr("Planner Studio active. Continue from your previous session."))]
             : snapshot.messages
         answers = Dictionary(
             uniqueKeysWithValues: snapshot.answers.compactMap { key, value in
@@ -2187,8 +2195,8 @@ final class PlannerChatViewModel {
     private func inferredConversationTitle() -> String {
         if let destination = answers[.destination]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !destination.isEmpty,
-           destination.caseInsensitiveCompare("anywhere") != .orderedSame {
-            return "Trip • \(destination)"
+           !isAnywhereValue(destination) {
+            return L10n.f("Trip • %@", displayValue(destination, for: .destination))
         }
 
         if let firstUser = messages.first(where: { $0.sender == .user })?.text.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -2196,12 +2204,12 @@ final class PlannerChatViewModel {
             return String(firstUser.prefix(42))
         }
 
-        return "New chat"
+        return L10n.tr("New chat")
     }
 
     private func formattedAnswers() -> String {
         questionSteps.map { step in
-            let value = answers[step.key] ?? "Not provided"
+            let value = answers[step.key].map { displayValue($0, for: step.key) } ?? L10n.tr("Not provided")
             return "- \(shortLabel(for: step.key)): \(value)"
         }
         .joined(separator: "\n")
@@ -2210,38 +2218,219 @@ final class PlannerChatViewModel {
     private func shortLabel(for key: PlannerQuestionStep.Key) -> String {
         switch key {
         case .destination:
-            return "Destination"
+            return L10n.tr("Destination")
         case .seasonAndDates:
-            return "Season and dates"
+            return L10n.tr("Season and dates")
         case .freeDays:
-            return "Free days"
+            return L10n.tr("Free days")
         case .travelers:
-            return "People"
+            return L10n.tr("People")
         case .travelersProfile:
-            return "Age and relationship"
+            return L10n.tr("Age and relationship")
         case .budget:
-            return "Budget"
+            return L10n.tr("Budget")
         case .interests:
-            return "Interests"
+            return L10n.tr("Interests")
         case .transportation:
-            return "Transportation"
+            return L10n.tr("Transportation")
         case .activities:
-            return "Activities"
+            return L10n.tr("Activities")
         }
+    }
+
+    func localizedQuestionTitle(for key: PlannerQuestionStep.Key) -> String {
+        switch key {
+        case .destination:
+            return L10n.tr("Where do you want to go?")
+        case .seasonAndDates:
+            return L10n.tr("Season, dates, and flexibility")
+        case .freeDays:
+            return L10n.tr("How many free days do you have?")
+        case .travelers:
+            return L10n.tr("Who are you traveling with?")
+        case .travelersProfile:
+            return L10n.tr("Age / relationship / flexibility")
+        case .budget:
+            return L10n.tr("What is the total budget?")
+        case .interests:
+            return L10n.tr("Main interests")
+        case .transportation:
+            return L10n.tr("Transportation preferences")
+        case .activities:
+            return L10n.tr("Activity pace")
+        }
+    }
+
+    func localizedQuestionSubtitle(for key: PlannerQuestionStep.Key) -> String {
+        switch key {
+        case .destination:
+            return L10n.tr("Start from a destination or a travel style, even an open one.")
+        case .seasonAndDates:
+            return L10n.tr("Weather impacts itinerary, costs, and activity quality.")
+        case .freeDays:
+            return L10n.tr("We size the plan to avoid unnecessary rushing.")
+        case .travelers:
+            return L10n.tr("Group type changes pace and logistics.")
+        case .travelersProfile:
+            return L10n.tr("Tell me your constraints to optimize comfort.")
+        case .budget:
+            return L10n.tr("I split it into practical categories.")
+        case .interests:
+            return L10n.tr("Pick one or combine multiple themes.")
+        case .transportation:
+            return L10n.tr("Tell us how you prefer to move around so we can balance comfort and timing.")
+        case .activities:
+            return L10n.tr("This defines the daily pace and the kind of backup plans we should include.")
+        }
+    }
+
+    func localizedPlaceholder(for key: PlannerQuestionStep.Key) -> String {
+        switch key {
+        case .destination:
+            return L10n.tr("Write a destination, an area, or a style...")
+        case .seasonAndDates:
+            return L10n.tr("Example: early June, +/- 3 days")
+        case .freeDays:
+            return L10n.tr("Example: 6 full days")
+        case .travelers:
+            return L10n.tr("Example: 2 adults + 1 child")
+        case .travelersProfile:
+            return L10n.tr("Example: parents + teen, no night transfers")
+        case .budget:
+            return L10n.tr("Example: 2200 EUR total")
+        case .interests:
+            return L10n.tr("Example: food + design + local markets")
+        case .transportation:
+            return L10n.tr("Example: mostly public transport")
+        case .activities:
+            return L10n.tr("Example: balanced days, one long evening")
+        }
+    }
+
+    func localizedOption(_ option: String, for key: PlannerQuestionStep.Key) -> String {
+        switch key {
+        case .destination:
+            if option == "Anywhere" { return L10n.tr("Anywhere") }
+            return option
+        case .seasonAndDates:
+            switch option {
+            case "Spring": return L10n.tr("Spring")
+            case "Summer": return L10n.tr("Summer")
+            case "Autumn": return L10n.tr("Autumn")
+            case "Flexible dates": return L10n.tr("Flexible dates")
+            default: return option
+            }
+        case .freeDays:
+            return localizedFreeDays(option)
+        case .travelers:
+            switch option {
+            case "Solo": return L10n.tr("Solo")
+            case "Couple": return L10n.tr("Couple")
+            case "Family": return L10n.tr("Family")
+            case "Friends group": return L10n.tr("Friends group")
+            default: return option
+            }
+        case .travelersProfile:
+            switch option {
+            case "Adults only": return L10n.tr("Adults only")
+            case "With children": return L10n.tr("With children")
+            case "Mixed generations": return L10n.tr("Mixed generations")
+            case "Very flexible": return L10n.tr("Very flexible")
+            default: return option
+            }
+        case .budget:
+            switch option {
+            case "Smart": return L10n.tr("Smart")
+            case "Comfort": return L10n.tr("Comfort")
+            case "Premium": return L10n.tr("Premium")
+            case "Luxury": return L10n.tr("Luxury")
+            default: return localizedBudget(option)
+            }
+        case .interests:
+            return option
+                .components(separatedBy: " + ")
+                .map { interest in
+                    switch interest {
+                    case "Food": return L10n.tr("Food")
+                    case "Nature": return L10n.tr("Nature")
+                    case "Culture": return L10n.tr("Culture")
+                    case "Adventure": return L10n.tr("Adventure")
+                    default: return interest
+                    }
+                }
+                .joined(separator: " + ")
+        case .transportation:
+            switch option {
+            case "Metro + walking": return L10n.tr("Metro + walking")
+            case "Rental car": return L10n.tr("Rental car")
+            case "Trains": return L10n.tr("Trains")
+            case "Mixed": return L10n.tr("Mixed")
+            default: return option
+            }
+        case .activities:
+            switch option {
+            case "Relaxed": return L10n.tr("Relaxed")
+            case "Balanced": return L10n.tr("Balanced")
+            case "Full immersion": return L10n.tr("Full immersion")
+            case "Nightlife": return L10n.tr("Nightlife")
+            default: return option
+            }
+        }
+    }
+
+    func displayValue(_ value: String, for key: PlannerQuestionStep.Key) -> String {
+        switch key {
+        case .destination:
+            return isAnywhereValue(value) ? L10n.tr("Anywhere") : value
+        case .seasonAndDates, .travelers, .travelersProfile, .budget, .interests, .transportation, .activities:
+            return localizedOption(value, for: key)
+        case .freeDays:
+            return localizedFreeDays(value)
+        }
+    }
+
+    private func localizedFreeDays(_ value: String) -> String {
+        if value == "Weekend" { return L10n.tr("Weekend") }
+        if value == "4-6 days" { return L10n.tr("4-6 days") }
+        if value == "7-10 days" { return L10n.tr("7-10 days") }
+        if value == "2+ weeks" { return L10n.tr("2+ weeks") }
+        if let days = Int(firstCapture(in: value, pattern: #"(\d{1,2})\s*(?:days|day|giorni|giorno)\b"#) ?? "") {
+            return displayFreeDays(days)
+        }
+        if let weeks = Int(firstCapture(in: value, pattern: #"(\d{1,2})\s*(?:weeks|week|settimane|settimana)\b"#) ?? "") {
+            return weeks == 1 ? L10n.f("%d week", weeks) : L10n.f("%d weeks", weeks)
+        }
+        return value
+    }
+
+    private func localizedBudget(_ value: String) -> String {
+        if let amount = firstCapture(in: value, pattern: #"(\d{3,6})\s*EUR total"#) {
+            return L10n.f("%@ EUR total", amount)
+        }
+        return value
+    }
+
+    private func displayFreeDays(_ days: Int) -> String {
+        days == 1 ? L10n.f("%d day", days) : L10n.f("%d days", days)
+    }
+
+    private func isAnywhereValue(_ value: String) -> Bool {
+        let normalized = normalizedInput(value)
+        return normalized == "anywhere" || normalized == "ovunque"
     }
 
     private func offlineFallbackReasoning(errorMessage: String) -> String {
         """
-        I could not reach the AI service, so here is a quick offline baseline built from your schema.
+        \(L10n.tr("I could not reach the AI service, so here is a quick offline baseline built from your schema."))
 
         \(formattedAnswers())
 
-        Recommended next moves:
-        1. Confirm destination and dates first, then lock transportation.
-        2. Book priority activities in advance and keep a weather backup plan for each day.
-        3. Keep 12-15% of your budget as a buffer for local transport and unexpected costs.
+        \(L10n.tr("Recommended next moves:"))
+        1. \(L10n.tr("Confirm destination and dates first, then lock transportation."))
+        2. \(L10n.tr("Book priority activities in advance and keep a weather backup plan for each day."))
+        3. \(L10n.tr("Keep 12-15% of your budget as a buffer for local transport and unexpected costs."))
 
-        Technical error: \(errorMessage)
+        \(L10n.f("Technical error: %@", errorMessage))
         """
     }
 }
@@ -2289,84 +2478,84 @@ private extension PlannerQuestionStep {
     static let flow: [PlannerQuestionStep] = [
         PlannerQuestionStep(
             key: .destination,
-            title: "Where do you want to go?",
-            subtitle: "Start from a destination or a travel style, even an open one.",
+            title: L10n.tr("Where do you want to go?"),
+            subtitle: L10n.tr("Start from a destination or a travel style, even an open one."),
             icon: "location.fill",
-            options: ["Moon", "New York", "Paris", "Anywhere"],
-            placeholder: "Write a destination, an area, or a style...",
-            skipValue: "Anywhere"
+            options: [L10n.tr("Rome"), L10n.tr("New York"), L10n.tr("Paris"), L10n.tr("Anywhere")],
+            placeholder: L10n.tr("Write a destination, an area, or a style..."),
+            skipValue: L10n.tr("Anywhere")
         ),
         PlannerQuestionStep(
             key: .seasonAndDates,
-            title: "Season, dates, and flexibility",
-            subtitle: "Weather impacts itinerary, costs, and activity quality.",
+            title: L10n.tr("Season, dates, and flexibility"),
+            subtitle: L10n.tr("Weather impacts itinerary, costs, and activity quality."),
             icon: "cloud.sun.fill",
-            options: ["Spring", "Summer", "Autumn", "Flexible dates"],
-            placeholder: "Example: early June, +/- 3 days",
-            skipValue: "Flexible dates"
+            options: [L10n.tr("Spring"), L10n.tr("Summer"), L10n.tr("Autumn"), L10n.tr("Flexible dates")],
+            placeholder: L10n.tr("Example: early June, +/- 3 days"),
+            skipValue: L10n.tr("Flexible dates")
         ),
         PlannerQuestionStep(
             key: .freeDays,
-            title: "How many free days do you have?",
-            subtitle: "We size the plan to avoid unnecessary rushing.",
+            title: L10n.tr("How many free days do you have?"),
+            subtitle: L10n.tr("We size the plan to avoid unnecessary rushing."),
             icon: "calendar.badge.clock",
-            options: ["Weekend", "4-6 days", "7-10 days", "2+ weeks"],
-            placeholder: "Example: 6 full days",
-            skipValue: "4-6 days"
+            options: [L10n.tr("Weekend"), L10n.tr("4-6 days"), L10n.tr("7-10 days"), L10n.tr("2+ weeks")],
+            placeholder: L10n.tr("Example: 6 full days"),
+            skipValue: L10n.tr("4-6 days")
         ),
         PlannerQuestionStep(
             key: .travelers,
-            title: "Who are you traveling with?",
-            subtitle: "Group type changes pace and logistics.",
+            title: L10n.tr("Who are you traveling with?"),
+            subtitle: L10n.tr("Group type changes pace and logistics."),
             icon: "person.3.fill",
-            options: ["Solo", "Couple", "Family", "Friends group"],
-            placeholder: "Example: 2 adults + 1 child",
-            skipValue: "Couple"
+            options: [L10n.tr("Solo"), L10n.tr("Couple"), L10n.tr("Family"), L10n.tr("Friends group")],
+            placeholder: L10n.tr("Example: 2 adults + 1 child"),
+            skipValue: L10n.tr("Couple")
         ),
         PlannerQuestionStep(
             key: .travelersProfile,
-            title: "Age / relationship / flexibility",
-            subtitle: "Tell me your constraints to optimize comfort.",
+            title: L10n.tr("Age / relationship / flexibility"),
+            subtitle: L10n.tr("Tell me your constraints to optimize comfort."),
             icon: "figure.2.and.child.holdinghands",
-            options: ["Adults only", "With children", "Mixed generations", "Very flexible"],
-            placeholder: "Example: parents + teen, no night transfers",
-            skipValue: "Very flexible"
+            options: [L10n.tr("Adults only"), L10n.tr("With children"), L10n.tr("Mixed generations"), L10n.tr("Very flexible")],
+            placeholder: L10n.tr("Example: parents + teen, no night transfers"),
+            skipValue: L10n.tr("Very flexible")
         ),
         PlannerQuestionStep(
             key: .budget,
-            title: "What is the total budget?",
-            subtitle: "I split it into practical categories.",
+            title: L10n.tr("What is the total budget?"),
+            subtitle: L10n.tr("I split it into practical categories."),
             icon: "eurosign.bank.building",
-            options: ["Smart", "Comfort", "Premium", "Luxury"],
-            placeholder: "Example: 2200 EUR total",
-            skipValue: "Comfort"
+            options: [L10n.tr("Smart"), L10n.tr("Comfort"), L10n.tr("Premium"), L10n.tr("Luxury")],
+            placeholder: L10n.tr("Example: 2200 EUR total"),
+            skipValue: L10n.tr("Comfort")
         ),
         PlannerQuestionStep(
             key: .interests,
-            title: "Main interests",
-            subtitle: "Pick one or combine multiple themes.",
+            title: L10n.tr("Main interests"),
+            subtitle: L10n.tr("Pick one or combine multiple themes."),
             icon: "star.bubble.fill",
-            options: ["Food", "Nature", "Culture", "Adventure"],
-            placeholder: "Example: food + design + local markets",
-            skipValue: "Culture + Food"
+            options: [L10n.tr("Food"), L10n.tr("Nature"), L10n.tr("Culture"), L10n.tr("Adventure")],
+            placeholder: L10n.tr("Example: food + design + local markets"),
+            skipValue: L10n.tr("Culture + Food")
         ),
         PlannerQuestionStep(
             key: .transportation,
-            title: "Transportation preferences",
-            subtitle: "No live transport API: I optimize based on your preferences.",
+            title: L10n.tr("Transportation preferences"),
+            subtitle: L10n.tr("Tell us how you prefer to move around so we can balance comfort and timing."),
             icon: "tram.fill",
-            options: ["Metro + walking", "Rental car", "Trains", "Mixed"],
-            placeholder: "Example: mostly public transport",
-            skipValue: "Mixed"
+            options: [L10n.tr("Metro + walking"), L10n.tr("Rental car"), L10n.tr("Trains"), L10n.tr("Mixed")],
+            placeholder: L10n.tr("Example: mostly public transport"),
+            skipValue: L10n.tr("Mixed")
         ),
         PlannerQuestionStep(
             key: .activities,
-            title: "Activity pace",
-            subtitle: "Defines daily intensity and backup plans (GetYourGuide style).",
+            title: L10n.tr("Activity pace"),
+            subtitle: L10n.tr("This defines the daily pace and the kind of backup plans we should include."),
             icon: "ticket.fill",
-            options: ["Relaxed", "Balanced", "Full immersion", "Nightlife"],
-            placeholder: "Example: balanced days, one long evening",
-            skipValue: "Balanced"
+            options: [L10n.tr("Relaxed"), L10n.tr("Balanced"), L10n.tr("Full immersion"), L10n.tr("Nightlife")],
+            placeholder: L10n.tr("Example: balanced days, one long evening"),
+            skipValue: L10n.tr("Balanced")
         )
     ]
 }

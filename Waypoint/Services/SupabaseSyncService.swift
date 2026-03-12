@@ -10,7 +10,12 @@ struct SupabaseSyncSnapshot {
 struct SupabaseSyncService {
     let config: SupabaseConfig
 
-    func push(operation: SyncOperation, accessToken: String, session: URLSession = .shared) async throws {
+    func push(
+        operation: SyncOperation,
+        accessToken: String,
+        authenticatedUserID: String,
+        session: URLSession = .shared
+    ) async throws {
         guard config.isConfigured else {
             throw SupabaseServiceError.notConfigured
         }
@@ -54,7 +59,10 @@ struct SupabaseSyncService {
                 accessToken: accessToken
             )
         case .createTrip, .createFeedback, .updateFeedback, .saveActivities, .upsertProfile:
-            let payload = try decodePayload(from: operation)
+            var payload = try decodePayload(from: operation)
+            if payload["authUserId"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+                payload["authUserId"] = authenticatedUserID
+            }
             let table = tableName(for: operation.type)
             let upsertConflict = conflictColumn(for: operation.type, payload: payload)
             request = try makeInsertOrUpsertRequest(
@@ -68,11 +76,35 @@ struct SupabaseSyncService {
         _ = try await send(request, session: session)
     }
 
-    func fetchSnapshot(accessToken: String, session: URLSession = .shared) async throws -> SupabaseSyncSnapshot {
-        let profiles = try await fetchRows(tableName: config.profilesTable, accessToken: accessToken, session: session)
-        let trips = try await fetchRows(tableName: config.tripsTable, accessToken: accessToken, session: session)
-        let feedback = try await fetchRows(tableName: config.feedbackTable, accessToken: accessToken, session: session)
-        let activities = try await fetchRows(tableName: config.activitiesTable, accessToken: accessToken, session: session)
+    func fetchSnapshot(
+        accessToken: String,
+        authenticatedUserID: String,
+        session: URLSession = .shared
+    ) async throws -> SupabaseSyncSnapshot {
+        let profiles = try await fetchRows(
+            tableName: config.profilesTable,
+            accessToken: accessToken,
+            authenticatedUserID: authenticatedUserID,
+            session: session
+        )
+        let trips = try await fetchRows(
+            tableName: config.tripsTable,
+            accessToken: accessToken,
+            authenticatedUserID: authenticatedUserID,
+            session: session
+        )
+        let feedback = try await fetchRows(
+            tableName: config.feedbackTable,
+            accessToken: accessToken,
+            authenticatedUserID: authenticatedUserID,
+            session: session
+        )
+        let activities = try await fetchRows(
+            tableName: config.activitiesTable,
+            accessToken: accessToken,
+            authenticatedUserID: authenticatedUserID,
+            session: session
+        )
         return SupabaseSyncSnapshot(
             profiles: profiles,
             trips: trips,
@@ -193,6 +225,7 @@ struct SupabaseSyncService {
     private func fetchRows(
         tableName: String,
         accessToken: String,
+        authenticatedUserID: String,
         session: URLSession
     ) async throws -> [[String: String]] {
         guard !accessToken.isEmpty else {
@@ -206,7 +239,10 @@ struct SupabaseSyncService {
         }
 
         components.path = "/rest/v1/\(encodedTable)"
-        components.queryItems = [URLQueryItem(name: "select", value: "*")]
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "authUserId", value: "eq.\(authenticatedUserID)")
+        ]
 
         guard let url = components.url else {
             throw SupabaseServiceError.invalidURL

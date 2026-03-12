@@ -12,6 +12,7 @@ final class HomeViewModel {
     var travelerFeedback: [TravelerFeedback] = []
     var localInsights: [LocalInsight] = []
     var recommendations: [RecommendationItem] = []
+    var exploreDataVersion = 0
 
     var isLoading = false
     var isRefreshingRecommendations = false
@@ -24,9 +25,23 @@ final class HomeViewModel {
     var visitedCountryCodes: [String] {
         var uniqueCodes = Set<String>()
 
-        for trip in trips {
+        for trip in trips where trip.tripIntent == .been {
             guard let destination = destination(for: trip),
                   let isoCode = isoCode(forCountry: destination.country) else { continue }
+            uniqueCodes.insert(isoCode)
+        }
+
+        return Array(uniqueCodes).sorted()
+    }
+
+    var plannedCountryCodes: [String] {
+        let visitedCodes = Set(visitedCountryCodes)
+        var uniqueCodes = Set<String>()
+
+        for trip in trips where trip.tripIntent == .wantToGo {
+            guard let destination = destination(for: trip),
+                  let isoCode = isoCode(forCountry: destination.country),
+                  !visitedCodes.contains(isoCode) else { continue }
             uniqueCodes.insert(isoCode)
         }
 
@@ -37,22 +52,54 @@ final class HomeViewModel {
         isLoading = true
         isOfflineModeEnabled = preferOffline
         errorMessage = nil
+        let authenticatedUserID = bootstrap.settingsStore.authenticatedUserID.trimmingCharacters(in: .whitespacesAndNewlines)
 
         do {
-            let profileDescriptor = FetchDescriptor<UserProfile>()
-            userProfile = try context.fetch(profileDescriptor).first
-            destinations = try context.fetch(FetchDescriptor<Destination>(sortBy: [SortDescriptor(\Destination.name)]))
-            trips = try context.fetch(FetchDescriptor<Trip>(sortBy: [SortDescriptor(\Trip.startDate, order: .reverse)]))
-            travelerFeedback = try context.fetch(FetchDescriptor<TravelerFeedback>(sortBy: [SortDescriptor(\TravelerFeedback.createdAt, order: .reverse)]))
-            localInsights = try context.fetch(FetchDescriptor<LocalInsight>())
+            let profiles = try context.fetch(FetchDescriptor<UserProfile>())
+            let fetchedDestinations = try context.fetch(
+                FetchDescriptor<Destination>(sortBy: [SortDescriptor(\Destination.name)])
+            )
+            let fetchedTrips = try context.fetch(
+                FetchDescriptor<Trip>(sortBy: [SortDescriptor(\Trip.startDate, order: .reverse)])
+            )
+            let fetchedFeedback = try context.fetch(
+                FetchDescriptor<TravelerFeedback>(sortBy: [SortDescriptor(\TravelerFeedback.createdAt, order: .reverse)])
+            )
+            let fetchedInsights = try context.fetch(FetchDescriptor<LocalInsight>())
+
+            userProfile = resolveActiveProfile(
+                profiles: profiles,
+                trips: fetchedTrips,
+                authenticatedUserID: authenticatedUserID
+            )
+            destinations = fetchedDestinations
+            localInsights = fetchedInsights
+
+            if let profile = userProfile,
+               !authenticatedUserID.isEmpty,
+               profile.authUserId != authenticatedUserID {
+                profile.authUserId = authenticatedUserID
+                try? context.save()
+            }
+
+            if let profile = userProfile {
+                trips = fetchedTrips.filter { $0.userId == profile.id }
+                let activeTripIDs = Set(trips.map(\.id))
+                travelerFeedback = fetchedFeedback.filter { activeTripIDs.contains($0.tripId) }
+            } else {
+                trips = []
+                travelerFeedback = []
+            }
+
             if let profile = userProfile {
                 updateDestinationDistances(using: profile, context: context)
                 sanitizeDestinationMetadata(context: context)
             }
+            exploreDataVersion &+= 1
             isLoading = false
             refreshRecommendations(bootstrap: bootstrap, preferOffline: preferOffline)
         } catch {
-            errorMessage = "Unable to load local data."
+            errorMessage = L10n.tr("Unable to load local data.")
             isLoading = false
         }
     }
@@ -61,27 +108,57 @@ final class HomeViewModel {
         errorMessage = nil
 
         do {
-            if userProfile == nil {
-                userProfile = try context.fetch(FetchDescriptor<UserProfile>()).first
-            }
-            destinations = try context.fetch(
+            let profiles = try context.fetch(FetchDescriptor<UserProfile>())
+            let fetchedDestinations = try context.fetch(
                 FetchDescriptor<Destination>(sortBy: [SortDescriptor(\Destination.name)])
             )
-            trips = try context.fetch(
+            let fetchedTrips = try context.fetch(
                 FetchDescriptor<Trip>(sortBy: [SortDescriptor(\Trip.startDate, order: .reverse)])
             )
-            travelerFeedback = try context.fetch(
+            let fetchedFeedback = try context.fetch(
                 FetchDescriptor<TravelerFeedback>(sortBy: [SortDescriptor(\TravelerFeedback.createdAt, order: .reverse)])
             )
-            localInsights = try context.fetch(FetchDescriptor<LocalInsight>())
+            let fetchedInsights = try context.fetch(FetchDescriptor<LocalInsight>())
+
+            userProfile = resolveActiveProfile(
+                profiles: profiles,
+                trips: fetchedTrips,
+                authenticatedUserID: ""
+            )
+            destinations = fetchedDestinations
+            localInsights = fetchedInsights
+
+            if let profile = userProfile {
+                trips = fetchedTrips.filter { $0.userId == profile.id }
+                let activeTripIDs = Set(trips.map(\.id))
+                travelerFeedback = fetchedFeedback.filter { activeTripIDs.contains($0.tripId) }
+            } else {
+                trips = []
+                travelerFeedback = []
+            }
 
             if let profile = userProfile {
                 updateDestinationDistances(using: profile, context: context)
                 sanitizeDestinationMetadata(context: context)
             }
+            exploreDataVersion &+= 1
         } catch {
-            errorMessage = "Unable to load local data."
+            errorMessage = L10n.tr("Unable to load local data.")
         }
+    }
+
+    func clearCachedData() {
+        recommendationRefreshTask?.cancel()
+        userProfile = nil
+        destinations = []
+        trips = []
+        travelerFeedback = []
+        localInsights = []
+        recommendations = []
+        exploreDataVersion &+= 1
+        isLoading = false
+        isRefreshingRecommendations = false
+        errorMessage = nil
     }
 
     func refreshRecommendations(bootstrap: AppBootstrap, preferOffline: Bool? = nil) {
@@ -209,6 +286,9 @@ final class HomeViewModel {
 
     private func isoCode(forCountry countryName: String) -> String? {
         let normalizedCountryName = normalizeCountryName(countryName)
+        if normalizedCountryName.range(of: "^[a-z]{2}$", options: .regularExpression) != nil {
+            return normalizedCountryName.uppercased()
+        }
 
         if let directMatch = Self.countryLookup[normalizedCountryName] {
             return directMatch
@@ -226,13 +306,16 @@ final class HomeViewModel {
     }
 
     private static let countryLookup: [String: String] = {
-        let englishLocale = Locale(identifier: "en_US_POSIX")
         var lookup: [String: String] = [:]
+        let localeIdentifiers = Set(Locale.availableIdentifiers + ["en_US_POSIX", Locale.current.identifier])
 
         for isoCode in Locale.Region.isoRegions.map(\.identifier) {
-            if let englishName = englishLocale.localizedString(forRegionCode: isoCode) {
-                let key = PlaceCanonicalizer.normalizeText(englishName)
-                lookup[key] = isoCode
+            for identifier in localeIdentifiers {
+                let locale = Locale(identifier: identifier)
+                if let localizedName = locale.localizedString(forRegionCode: isoCode) {
+                    let key = PlaceCanonicalizer.normalizeText(localizedName)
+                    lookup[key] = isoCode
+                }
             }
         }
 
@@ -320,6 +403,57 @@ final class HomeViewModel {
         }
     }
 
+    private func resolveActiveProfile(
+        profiles: [UserProfile],
+        trips: [Trip],
+        authenticatedUserID: String
+    ) -> UserProfile? {
+        guard !profiles.isEmpty else { return nil }
+        if !authenticatedUserID.isEmpty,
+           let matchingProfile = profiles.first(where: { $0.authUserId == authenticatedUserID }) {
+            return matchingProfile
+        }
+        if profiles.count == 1 {
+            return profiles.first
+        }
+
+        let tripCounts = trips.reduce(into: [UUID: Int]()) { counts, trip in
+            counts[trip.userId, default: 0] += 1
+        }
+
+        let sortedProfiles = profiles.sorted { lhs, rhs in
+            let lhsTripCount = tripCounts[lhs.id, default: 0]
+            let rhsTripCount = tripCounts[rhs.id, default: 0]
+            if lhsTripCount != rhsTripCount {
+                return lhsTripCount > rhsTripCount
+            }
+
+            let lhsCompleteness = profileCompletenessScore(lhs)
+            let rhsCompleteness = profileCompletenessScore(rhs)
+            if lhsCompleteness != rhsCompleteness {
+                return lhsCompleteness > rhsCompleteness
+            }
+
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+
+        return sortedProfiles.first
+    }
+
+    private func profileCompletenessScore(_ profile: UserProfile) -> Int {
+        var score = 0
+        if profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != "traveler" {
+            score += 2
+        }
+        if !profile.homeCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            score += 1
+        }
+        if !profile.homeCountry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            score += 1
+        }
+        return score
+    }
+
     private static func computeOnBackground<T>(
         _ work: @escaping () -> T
     ) async -> T {
@@ -348,6 +482,7 @@ private extension UserProfile {
     func detachedCopy() -> UserProfile {
         UserProfile(
             id: id,
+            authUserId: authUserId,
             name: name,
             homeCity: homeCity,
             homeCountry: homeCountry,

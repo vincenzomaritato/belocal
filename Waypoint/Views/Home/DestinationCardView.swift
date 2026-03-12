@@ -29,20 +29,20 @@ struct DestinationCardView: View {
                 }
 
                 if !item.destination.styles.isEmpty {
-                    Text(item.destination.styles.prefix(3).joined(separator: " • "))
+                    Text(item.destination.styles.prefix(3).map(L10n.style).joined(separator: " • "))
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
 
                 HStack(spacing: 12) {
-                    statLine(symbol: "leaf", label: "Eco", value: "\(item.ecoScore)")
-                    statLine(symbol: "aqi.medium", label: "CO2", value: "\(Int(item.estimatedCO2))kg")
-                    statLine(symbol: "person.3", label: "Match", value: "\(displayMatchPercentage)%")
+                    statLine(symbol: "leaf", label: L10n.tr("Eco"), value: "\(item.ecoScore)")
+                    statLine(symbol: "aqi.medium", label: "CO2", value: L10n.f("%dkg", Int(item.estimatedCO2)))
+                    statLine(symbol: "person.3", label: L10n.tr("Match"), value: L10n.f("%d%%", displayMatchPercentage))
                 }
                 .accessibilityElement(children: .combine)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Why it fits")
+                    Text(L10n.tr("Why it fits"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text(item.whyRecommended)
@@ -53,7 +53,7 @@ struct DestinationCardView: View {
                 }
 
                 HStack {
-                    Text("View destination details")
+                    Text(L10n.tr("View destination details"))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Color.accentColor)
                     Spacer()
@@ -65,9 +65,9 @@ struct DestinationCardView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "\(item.destination.name), \(item.destination.country). Match \(displayMatchPercentage) percent. Eco score \(item.ecoScore). \(item.whyRecommended)"
+            L10n.f("%@, %@. Match %d percent. Eco score %d. %@", item.destination.name, item.destination.country, displayMatchPercentage, item.ecoScore, item.whyRecommended)
         )
-        .accessibilityHint("Opens destination details and planning actions")
+        .accessibilityHint(L10n.tr("Opens destination details and planning actions"))
     }
 
     private var scoreBadge: some View {
@@ -85,7 +85,7 @@ struct DestinationCardView: View {
                 .monospacedDigit()
         }
         .frame(width: 42, height: 42)
-        .accessibilityLabel("Destination score \(Int(item.breakdown.finalScore)) out of 100")
+        .accessibilityLabel(L10n.f("Destination score %d out of 100", Int(item.breakdown.finalScore)))
     }
 
     private func statLine(symbol: String, label: String, value: String) -> some View {

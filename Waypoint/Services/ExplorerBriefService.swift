@@ -79,14 +79,14 @@ struct FoundationModelsExplorerBriefService: ExplorerBriefServing {
     ) -> String {
         let topAttractions = attractions.prefix(3).map(\.name).joined(separator: ", ")
         let topRestaurants = restaurants.prefix(3).map(\.name).joined(separator: ", ")
-        let profileStyles = topStyles(from: userProfile).joined(separator: ", ")
+        let profileStyles = topStyles(from: userProfile).map(L10n.style).joined(separator: ", ")
         let avgRating = feedback.isEmpty
             ? "n/a"
             : String(format: "%.1f/5", Double(feedback.map(\.rating).reduce(0, +)) / Double(feedback.count))
 
         return """
         You are a travel assistant for an Apple-style city explorer app.
-        Write a concise personalized brief in English, max 2 short sentences.
+        Write a concise personalized brief in \(L10n.preferredNarrativeLanguage), max 2 short sentences.
         Tone: practical, premium, specific.
 
         City: \(city.label)
@@ -118,21 +118,28 @@ struct FoundationModelsExplorerBriefService: ExplorerBriefServing {
     ) -> String {
         let styleLine: String
         if let topStyle = topStyles(from: userProfile).first {
-            styleLine = "Top match for your \(topStyle.lowercased()) style."
+            styleLine = L10n.f("Top match for your %@ style.", L10n.style(topStyle).lowercased(with: Locale.current))
         } else {
-            styleLine = "Balanced mix for a first visit."
+            styleLine = L10n.tr("Balanced mix for a first visit.")
         }
 
         let ratingLine: String
         if feedback.isEmpty {
-            ratingLine = "No local feedback yet, so results are based on live place quality signals."
+            ratingLine = L10n.tr("No local feedback yet, so results are based on live place quality signals.")
         } else {
             let avg = Double(feedback.map(\.rating).reduce(0, +)) / Double(feedback.count)
-            ratingLine = "Traveler feedback averages \(String(format: "%.1f", avg))/5."
+            ratingLine = L10n.f("Traveler feedback averages %@/5.", String(format: "%.1f", avg))
         }
 
-        let climatePart = destination.map { "Climate: \($0.climate)." } ?? ""
-        return "\(city.name) has \(attractions.count) attractions, \(restaurants.count) restaurants, and \(essentials.count) essentials. \(styleLine) \(ratingLine) \(climatePart)".trimmingCharacters(in: .whitespacesAndNewlines)
+        let climatePart = destination.map { L10n.f("Climate: %@.", L10n.climate($0.climate)) } ?? ""
+        let headline = L10n.f(
+            "%@ has %lld attractions, %lld restaurants, and %lld essentials.",
+            city.name,
+            attractions.count,
+            restaurants.count,
+            essentials.count
+        )
+        return "\(headline) \(styleLine) \(ratingLine) \(climatePart)".trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func topStyles(from profile: UserProfile?) -> [String] {

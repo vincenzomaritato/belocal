@@ -5,11 +5,11 @@
 	<key>DEFAULT_ORIGIN_IATA</key>
 	<string>FCO</string>
 	<key>GEOAPIFY_API_KEY</key>
-	<string>YOUR_GEOAPIFY_API_KEY</string>
+    <string>YOUR_GEOAPIFY_API_KEY</string>
 	<key>GOOGLE_PLACES_API_KEY</key>
-	<string>YOUR_GOOGLE_PLACES_API_KEY</string>
+    <string>YOUR_GOOGLE_PLACES_API_KEY</string>
 	<key>OPENAI_API_KEY</key>
-	<string>YOUR_OPENAI_API_KEY</string>
+    <string>YOUR_OPENAI_API_KEY</string>
 	<key>OPENAI_MODEL</key>
 	<string>gpt-5-mini</string>
 </dict>

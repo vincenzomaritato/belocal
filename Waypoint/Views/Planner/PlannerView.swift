@@ -122,7 +122,7 @@ struct PlannerView: View {
     }
 
     private var header: some View {
-        Text("Your next adventures!")
+        Text(L10n.tr("Your next adventures!"))
             .font(.system(size: 38, weight: .bold, design: .rounded))
             .tracking(-0.6)
             .foregroundStyle(.primary)
@@ -195,7 +195,7 @@ struct PlannerView: View {
                     .frame(width: 34, height: 34)
                     .blur(radius: 0.25)
 
-                Text(query.isEmpty ? "Start a new planner chat" : query)
+                Text(query.isEmpty ? L10n.tr("Start a new planner chat") : query)
                     .font(.system(size: 18, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -218,9 +218,9 @@ struct PlannerView: View {
         )
         .opacity(isChatPresented ? 0.01 : 1)
         .allowsHitTesting(!isChatPresented)
-        .accessibilityLabel("Start planner chat")
-        .accessibilityValue(query.isEmpty ? "No prompt" : query)
-        .accessibilityHint("Opens Planner Studio to create a new conversation")
+        .accessibilityLabel(L10n.tr("Start planner chat"))
+        .accessibilityValue(query.isEmpty ? L10n.tr("No prompt") : query)
+        .accessibilityHint(L10n.tr("Opens Planner Studio to create a new conversation"))
     }
 
     private var tabs: some View {
@@ -247,8 +247,8 @@ struct PlannerView: View {
         LazyVStack(spacing: 12) {
             if myPlanBriefConversations.isEmpty {
                 emptyCard(
-                    title: "No final briefs yet",
-                    subtitle: "Create or complete a chat in My Chat. Final briefs linked to chats will appear here."
+                    title: L10n.tr("No final briefs yet"),
+                    subtitle: L10n.tr("Create or complete a chat in My Chat. Final briefs linked to chats will appear here.")
                 )
             } else {
                 ForEach(myPlanBriefConversations, id: \.id) { conversation in
@@ -257,7 +257,7 @@ struct PlannerView: View {
                             Button(role: .destructive) {
                                 deleteConversation(conversation)
                             } label: {
-                                Label("Delete chat and brief", systemImage: "trash")
+                                Label(L10n.tr("Delete chat and brief"), systemImage: "trash")
                             }
                         }
                 }
@@ -271,8 +271,8 @@ struct PlannerView: View {
 
             if myChatConversations.isEmpty {
                 emptyCard(
-                    title: "No chats yet",
-                    subtitle: "Start a new chat. It will be saved automatically and listed here."
+                    title: L10n.tr("No chats yet"),
+                    subtitle: L10n.tr("Start a new chat. It will be saved automatically and listed here.")
                 )
             } else {
                 LazyVStack(spacing: 10) {
@@ -282,7 +282,7 @@ struct PlannerView: View {
                                 Button(role: .destructive) {
                                     deleteConversation(conversation)
                                 } label: {
-                                    Label("Delete chat and brief", systemImage: "trash")
+                                    Label(L10n.tr("Delete chat and brief"), systemImage: "trash")
                                 }
                             }
                     }
@@ -293,16 +293,16 @@ struct PlannerView: View {
 
     private var newChatCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("My Chat")
+            Text(L10n.tr("My Chat"))
                 .font(.system(size: 21, weight: .bold, design: .rounded))
-            Text("Continue existing chats or start a new one. Every new chat is saved automatically.")
+            Text(L10n.tr("Continue existing chats or start a new one. Every new chat is saved automatically."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             Button {
                 openNewChat(prompt: "", prefill: nil)
             } label: {
-                Label("New Chat", systemImage: "plus.bubble.fill")
+                Label(L10n.tr("New Chat"), systemImage: "plus.bubble.fill")
                     .font(.headline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -339,7 +339,7 @@ struct PlannerView: View {
                     Spacer(minLength: 0)
 
                     if conversation.hasFinalBrief {
-                        Text("Brief")
+                        Text(L10n.tr("Brief"))
                             .font(.caption2.weight(.bold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -350,13 +350,13 @@ struct PlannerView: View {
                     }
                 }
 
-                Text(conversation.lastMessagePreview.isEmpty ? "Open chat" : conversation.lastMessagePreview)
-                    .font(.caption)
+                Text(conversation.lastMessagePreview.isEmpty ? L10n.tr("Open chat") : conversation.lastMessagePreview)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
 
                 Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .padding(12)
@@ -364,10 +364,6 @@ struct PlannerView: View {
             .liquidSurface(cornerRadius: 18, isDark: colorScheme == .dark)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(tab.label)
-        .accessibilityValue(selectedTab == tab ? "Selected" : "Not selected")
-        .accessibilityHint("Switch planner section")
-        .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
     }
 
     private func briefCard(_ conversation: PlannerConversation) -> some View {
@@ -390,18 +386,18 @@ struct PlannerView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text(conversation.finalBriefOverview ?? "Open this linked chat to view and update the full brief.")
+                Text(conversation.finalBriefOverview ?? L10n.tr("Open this linked chat to view and update the full brief."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
 
                 HStack {
                     Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("Open brief")
-                        .font(.caption2.weight(.semibold))
+                    Text(L10n.tr("Open brief"))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -443,6 +439,11 @@ struct PlannerView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityTapTarget()
+        .accessibilityLabel(tab.label)
+        .accessibilityValue(selectedTab == tab ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Switch planner section"))
+        .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
     }
 
     private var heroTilt: [Double] { [-5, 2, -3, 3, -2] }
@@ -568,8 +569,8 @@ private enum PlannerTab {
 
     var label: String {
         switch self {
-        case .myPlan: return "My Plan"
-        case .myChat: return "My Chat"
+        case .myPlan: return L10n.tr("My Plan")
+        case .myChat: return L10n.tr("My Chat")
         }
     }
 }
@@ -603,10 +604,20 @@ private extension View {
 }
 
 #Preview {
+    let defaults = UserDefaults(suiteName: "preview.planner") ?? .standard
+    let settingsStore = AppSettingsStore(defaults: defaults)
+    let bootstrap = AppBootstrap(settingsStore: settingsStore)
+    let container = SwiftDataStack.makeContainer(inMemory: true)
+    let context = container.mainContext
+    bootstrap.prepare(context: context)
+
     let homeViewModel = HomeViewModel()
+    homeViewModel.load(context: context, bootstrap: bootstrap)
 
     return PlannerView(
         homeViewModel: homeViewModel,
         launchRequest: nil
     )
+    .environment(bootstrap)
+    .modelContainer(container)
 }

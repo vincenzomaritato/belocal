@@ -326,63 +326,75 @@ struct AttractionCardLiveInfoService {
         guard let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
             return nil
         }
-        guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(encoded)") else {
-            return nil
-        }
+        let languages = Array(NSOrderedSet(array: [preferredLanguageCode, "en"]).compactMap { $0 as? String })
 
-        do {
-            var request = URLRequest(url: url)
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                return nil
+        for languageCode in languages {
+            guard let url = URL(string: "https://\(languageCode).wikipedia.org/api/rest_v1/page/summary/\(encoded)") else {
+                continue
             }
 
-            let decoded = try JSONDecoder().decode(WikipediaSummaryResponse.self, from: data)
-            guard decoded.type != "disambiguation" else { return nil }
+            do {
+                var request = URLRequest(url: url)
+                request.setValue("application/json", forHTTPHeaderField: "Accept")
+                let (data, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                    continue
+                }
 
-            let summary = decoded.extract.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !summary.isEmpty else { return nil }
+                let decoded = try JSONDecoder().decode(WikipediaSummaryResponse.self, from: data)
+                guard decoded.type != "disambiguation" else { continue }
 
-            return WikipediaAttractionInfo(
-                title: decoded.title,
-                summary: summary,
-                imageURL: decoded.thumbnail?.source.flatMap(URL.init(string:)),
-                articleURL: decoded.contentURLs?.desktop?.page.flatMap(URL.init(string:))
-            )
-        } catch {
-            return nil
+                let summary = decoded.extract.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !summary.isEmpty else { continue }
+
+                return WikipediaAttractionInfo(
+                    title: decoded.title,
+                    summary: summary,
+                    imageURL: decoded.thumbnail?.source.flatMap(URL.init(string:)),
+                    articleURL: decoded.contentURLs?.desktop?.page.flatMap(URL.init(string:))
+                )
+            } catch {
+                continue
+            }
         }
+
+        return nil
     }
 
     private func searchWikipediaTopTitle(query: String) async -> String? {
         guard let normalized = trimmedNonEmpty(query) else { return nil }
-        var components = URLComponents(string: "https://en.wikipedia.org/w/api.php")
-        components?.queryItems = [
-            URLQueryItem(name: "action", value: "opensearch"),
-            URLQueryItem(name: "search", value: normalized),
-            URLQueryItem(name: "limit", value: "1"),
-            URLQueryItem(name: "namespace", value: "0"),
-            URLQueryItem(name: "format", value: "json")
-        ]
-        guard let url = components?.url else { return nil }
+        let languages = Array(NSOrderedSet(array: [preferredLanguageCode, "en"]).compactMap { $0 as? String })
 
-        do {
-            let (data, response) = try await session.data(from: url)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                return nil
-            }
+        for languageCode in languages {
+            var components = URLComponents(string: "https://\(languageCode).wikipedia.org/w/api.php")
+            components?.queryItems = [
+                URLQueryItem(name: "action", value: "opensearch"),
+                URLQueryItem(name: "search", value: normalized),
+                URLQueryItem(name: "limit", value: "1"),
+                URLQueryItem(name: "namespace", value: "0"),
+                URLQueryItem(name: "format", value: "json")
+            ]
+            guard let url = components?.url else { continue }
 
-            guard let payload = try JSONSerialization.jsonObject(with: data) as? [Any],
-                  payload.count > 1,
-                  let titles = payload[1] as? [String],
-                  let first = titles.first else {
-                return nil
+            do {
+                let (data, response) = try await session.data(from: url)
+                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                    continue
+                }
+
+                guard let payload = try JSONSerialization.jsonObject(with: data) as? [Any],
+                      payload.count > 1,
+                      let titles = payload[1] as? [String],
+                      let first = titles.first else {
+                    continue
+                }
+                return first
+            } catch {
+                continue
             }
-            return first
-        } catch {
-            return nil
         }
+
+        return nil
     }
 
     private func fetchWikimediaCommonsImage(query: String) async -> URL? {
@@ -420,21 +432,21 @@ struct AttractionCardLiveInfoService {
 
     private func weatherDescription(for code: Int, isDay: Bool?) -> String {
         switch code {
-        case 0: return (isDay == false) ? "Clear night" : "Clear sky"
-        case 1: return "Mainly clear"
-        case 2: return "Partly cloudy"
-        case 3: return "Overcast"
-        case 45, 48: return "Fog"
-        case 51, 53, 55: return "Drizzle"
-        case 56, 57: return "Freezing drizzle"
-        case 61, 63, 65: return "Rain"
-        case 66, 67: return "Freezing rain"
-        case 71, 73, 75, 77: return "Snow"
-        case 80, 81, 82: return "Rain showers"
-        case 85, 86: return "Snow showers"
-        case 95: return "Thunderstorm"
-        case 96, 99: return "Thunderstorm with hail"
-        default: return "Variable weather"
+        case 0: return (isDay == false) ? L10n.tr("Clear night") : L10n.tr("Clear sky")
+        case 1: return L10n.tr("Mainly clear")
+        case 2: return L10n.tr("Partly cloudy")
+        case 3: return L10n.tr("Overcast")
+        case 45, 48: return L10n.tr("Fog")
+        case 51, 53, 55: return L10n.tr("Drizzle")
+        case 56, 57: return L10n.tr("Freezing drizzle")
+        case 61, 63, 65: return L10n.tr("Rain")
+        case 66, 67: return L10n.tr("Freezing rain")
+        case 71, 73, 75, 77: return L10n.tr("Snow")
+        case 80, 81, 82: return L10n.tr("Rain showers")
+        case 85, 86: return L10n.tr("Snow showers")
+        case 95: return L10n.tr("Thunderstorm")
+        case 96, 99: return L10n.tr("Thunderstorm with hail")
+        default: return L10n.tr("Variable weather")
         }
     }
 
@@ -462,7 +474,7 @@ struct AttractionCardLiveInfoService {
     private func readablePriceLevel(_ raw: String?) -> String? {
         guard let raw = trimmedNonEmpty(raw) else { return nil }
         switch raw {
-        case "PRICE_LEVEL_FREE": return "Free"
+        case "PRICE_LEVEL_FREE": return L10n.tr("Free")
         case "PRICE_LEVEL_INEXPENSIVE": return "€"
         case "PRICE_LEVEL_MODERATE": return "€€"
         case "PRICE_LEVEL_EXPENSIVE": return "€€€"
@@ -472,7 +484,7 @@ struct AttractionCardLiveInfoService {
     }
 
     private var preferredLanguageCode: String {
-        Locale.current.language.languageCode?.identifier ?? "en"
+        L10n.preferredLanguageCode
     }
 }
 

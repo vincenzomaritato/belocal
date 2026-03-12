@@ -17,7 +17,7 @@ struct TripCardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(destination?.name ?? "Unknown Destination")
+                        Text(destination?.name ?? L10n.tr("Unknown Destination"))
                             .font(.title3.weight(.semibold))
                         Label(destination?.country ?? "", systemImage: "mappin.and.ellipse")
                             .font(.caption)
@@ -26,7 +26,7 @@ struct TripCardView: View {
 
                     Spacer(minLength: 0)
 
-                    Text("\(tripDays) days")
+                    Text(L10n.f("%d days", tripDays))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -46,7 +46,7 @@ struct TripCardView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Eco score")
+                        Text(L10n.tr("Eco score"))
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -63,9 +63,17 @@ struct TripCardView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "\(destination?.name ?? "Unknown destination"), \(destination?.country ?? ""). \(tripDays) days. Budget \(Int(trip.budgetSpent)) euros. Emissions \(Int(trip.co2Estimated)) kilograms. Eco score \(Int(trip.ecoScoreSnapshot))."
+            L10n.f(
+                "%@, %@. %lld days. Budget %lld euros. Emissions %lld kilograms. Eco score %lld.",
+                destination?.name ?? L10n.tr("Unknown destination"),
+                destination?.country ?? "",
+                Int64(tripDays),
+                Int64(trip.budgetSpent),
+                Int64(trip.co2Estimated),
+                Int64(trip.ecoScoreSnapshot)
+            )
         )
-        .accessibilityHint("Opens this trip timeline and feedback")
+        .accessibilityHint(L10n.tr("Opens this trip timeline and feedback"))
     }
 
     private func statItem(symbol: String, value: String) -> some View {

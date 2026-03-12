@@ -39,9 +39,9 @@ final class PlannerViewModel {
     var userMessage = ""
     var agentMessages: [AgentMessage] = [
         AgentMessage(
-            title: "Travel Agent",
-            body: "Use natural language or commands. Try `/help` to see orchestration commands.",
-            suggestions: ["/flights", "/restaurants", "/activities", "/addday"]
+            title: L10n.tr("Travel Agent"),
+            body: L10n.tr("Use natural language or commands. Try `/help` to see orchestration commands."),
+            suggestions: ["/restaurants", "/activities", "/addday"]
         )
     ]
 
@@ -52,7 +52,6 @@ final class PlannerViewModel {
 
     let commandHints: [String] = [
         "/help",
-        "/flights",
         "/restaurants",
         "/activities",
         "/addday",
@@ -64,7 +63,7 @@ final class PlannerViewModel {
             withAnimation(.easeInOut(duration: 0.2)) {
                 draft.selectedStyles.append(suggestion)
             }
-            appendAgent("Added style `\(suggestion)`. I can now run `/activities` or `/restaurants`.", suggestions: ["/activities", "/restaurants", "/save"])
+            appendAgent(L10n.f("Added style `%@`. I can now run `/activities` or `/restaurants`.", suggestion), suggestions: ["/activities", "/restaurants", "/save"])
         }
     }
 
@@ -97,11 +96,10 @@ final class PlannerViewModel {
     ) {
         let mapped: String
         switch action {
-        case "Find flights": mapped = "/flights"
-        case "Find restaurants": mapped = "/restaurants"
-        case "Find activities": mapped = "/activities"
-        case "Add a day": mapped = "/addday"
-        case "Save Trip Draft": mapped = "/save"
+        case L10n.tr("Find restaurants"): mapped = "/restaurants"
+        case L10n.tr("Find activities"): mapped = "/activities"
+        case L10n.tr("Add a day"): mapped = "/addday"
+        case L10n.tr("Save Trip Draft"): mapped = "/save"
         default: mapped = action
         }
 
@@ -124,7 +122,7 @@ final class PlannerViewModel {
         bootstrap: AppBootstrap
     ) {
         if emitUserMessage {
-            agentMessages.append(AgentMessage(title: "You", body: input, isUser: true))
+            agentMessages.append(AgentMessage(title: L10n.tr("You"), body: input, isUser: true))
         }
 
         if input.hasPrefix("/") {
@@ -147,26 +145,26 @@ final class PlannerViewModel {
         case "/activities": return .runTool(.activities)
         case "/addday": return .addDay
         case "/removeday":
-            guard parts.count > 1, let value = Int(parts[1]) else { return .unknown("Use `/removeday 2`") }
+            guard parts.count > 1, let value = Int(parts[1]) else { return .unknown(L10n.tr("Use `/removeday 2`")) }
             return .removeDay(value)
         case "/budget":
-            guard parts.count > 1 else { return .unknown("Use `/budget 2400`") }
+            guard parts.count > 1 else { return .unknown(L10n.tr("Use `/budget 2400`")) }
             let raw = parts[1].replacingOccurrences(of: ",", with: ".")
-            guard let budget = Double(raw) else { return .unknown("Budget must be numeric, e.g. `/budget 2400`") }
+            guard let budget = Double(raw) else { return .unknown(L10n.tr("Budget must be numeric, e.g. `/budget 2400`")) }
             return .setBudget(budget)
         case "/people":
-            guard parts.count > 1, let people = Int(parts[1]) else { return .unknown("Use `/people 2`") }
+            guard parts.count > 1, let people = Int(parts[1]) else { return .unknown(L10n.tr("Use `/people 2`")) }
             return .setPeople(people)
         case "/style":
-            guard parts.count > 1 else { return .unknown("Use `/style Culture`") }
+            guard parts.count > 1 else { return .unknown(L10n.tr("Use `/style Culture`")) }
             return .addStyle(parts.dropFirst().joined(separator: " "))
         case "/destination":
-            guard parts.count > 1 else { return .unknown("Use `/destination Lisbon`") }
+            guard parts.count > 1 else { return .unknown(L10n.tr("Use `/destination Lisbon`")) }
             return .setDestination(parts.dropFirst().joined(separator: " "))
         case "/save":
             return .save
         default:
-            return .unknown("Unknown command: `\(head)`")
+            return .unknown(L10n.f("Unknown command: `%@`", head))
         }
     }
 
@@ -180,8 +178,8 @@ final class PlannerViewModel {
         switch command {
         case .help:
             appendAgent(
-                "Available commands: `/flights`, `/restaurants`, `/activities`, `/addday`, `/removeday n`, `/budget n`, `/people n`, `/style name`, `/destination name`, `/save`.",
-                suggestions: ["/flights", "/activities", "/save"]
+                L10n.tr("Available commands: `/restaurants`, `/activities`, `/addday`, `/removeday n`, `/budget n`, `/people n`, `/style name`, `/destination name`, `/save`. Flight search is disabled in this build."),
+                suggestions: ["/activities", "/restaurants", "/save"]
             )
 
         case .runTool(let tool):
@@ -189,34 +187,34 @@ final class PlannerViewModel {
 
         case .addDay:
             addDay()
-            appendAgent("Added one day to your timeline.", suggestions: ["/activities", "/save"])
+            appendAgent(L10n.tr("Added one day to your timeline."), suggestions: ["/activities", "/save"])
 
         case .removeDay(let dayIndex):
             guard let day = draft.timeline.first(where: { $0.dayIndex == dayIndex }) else {
-                appendAgent("Day \(dayIndex) not found. Current days: \(draft.timeline.map(\.dayIndex).map(String.init).joined(separator: ", ")).")
+                appendAgent(L10n.f("Day %1$lld not found. Current days: %2$@.", dayIndex, draft.timeline.map(\.dayIndex).map(String.init).joined(separator: ", ")))
                 return
             }
             removeDay(day)
-            appendAgent("Removed Day \(dayIndex).")
+            appendAgent(L10n.f("Removed Day %lld.", dayIndex))
 
         case .setBudget(let budget):
             draft.budget = min(max(budget, 400), 7000)
-            appendAgent("Budget updated to €\(Int(draft.budget)).", suggestions: ["/flights", "/activities"])
+            appendAgent(L10n.f("Budget updated to €%lld.", Int(draft.budget)), suggestions: ["/activities", "/restaurants"])
 
         case .setPeople(let people):
             draft.people = min(max(people, 1), 8)
-            appendAgent("Traveler count updated to \(draft.people).", suggestions: ["/flights", "/save"])
+            appendAgent(L10n.f("Traveler count updated to %lld.", draft.people), suggestions: ["/activities", "/save"])
 
         case .addStyle(let style):
             let normalizedStyle = style.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !normalizedStyle.isEmpty else {
-                appendAgent("Style cannot be empty.")
+                appendAgent(L10n.tr("Style cannot be empty."))
                 return
             }
             if !draft.selectedStyles.contains(normalizedStyle) {
                 draft.selectedStyles.append(normalizedStyle)
             }
-            appendAgent("Style `\(normalizedStyle)` added.", suggestions: ["/activities", "/restaurants"])
+            appendAgent(L10n.f("Style `%@` added.", normalizedStyle), suggestions: ["/activities", "/restaurants"])
 
         case .setDestination(let value):
             let query = value.lowercased()
@@ -224,11 +222,11 @@ final class PlannerViewModel {
                 destination.name.lowercased().contains(query) || destination.country.lowercased().contains(query)
             }
             guard let match else {
-                appendAgent("No destination matched `\(value)`. Try `/destination Lisbon`.")
+                appendAgent(L10n.f("No destination matched `%@`. Try `/destination Lisbon`.", value))
                 return
             }
             draft.destinationId = match.id
-            appendAgent("Destination set to \(match.name), \(match.country).", suggestions: ["/flights", "/activities", "/save"])
+            appendAgent(L10n.f("Destination set to %@, %@.", match.name, match.country), suggestions: ["/activities", "/restaurants", "/save"])
 
         case .save:
             saveDraftAsTrip(context: context, homeViewModel: homeViewModel, bootstrap: bootstrap)
@@ -264,7 +262,7 @@ final class PlannerViewModel {
 
         if lower.contains("add day") {
             addDay()
-            appendAgent("Added a new day. Ask me for activities when ready.", suggestions: ["/activities", "/save"])
+            appendAgent(L10n.tr("Added a new day. Ask me for activities when ready."), suggestions: ["/activities", "/save"])
             return
         }
 
@@ -280,8 +278,8 @@ final class PlannerViewModel {
         }
 
         appendAgent(
-            "I can orchestrate tools with commands. Use `/help` or ask like “find flights and add one activity”.",
-            suggestions: ["/help", "/flights", "/activities"]
+            L10n.tr("I can orchestrate tools with commands. Use `/help` or ask like “find restaurants and add one activity”."),
+            suggestions: ["/help", "/restaurants", "/activities"]
         )
     }
 
@@ -298,27 +296,52 @@ final class PlannerViewModel {
                 isToolLoading.remove(tool)
 
                 switch result {
-                case .flights(let options):
-                    latestFlights = options
-                    appendAgent(
-                        "Flights ready. Added top option to Day 1: \(options.first?.airline ?? "n/a").",
+                case .flights(let result):
+                    latestFlights = result.items
+                    appendToolMessage(
+                        result: result,
+                        successMessage: L10n.f("Flight options are ready. Added %@ to Day 1.", result.items.first?.airline ?? L10n.tr("the top option")),
+                        emptyMessage: L10n.tr("No flight options found for this plan right now."),
                         suggestions: ["/activities", "/save"]
                     )
-                case .restaurants(let options):
-                    latestRestaurants = options
-                    appendAgent(
-                        "Restaurants ready. Added one local spot to Day 1.",
+                case .restaurants(let result):
+                    latestRestaurants = result.items
+                    appendToolMessage(
+                        result: result,
+                        successMessage: L10n.tr("Restaurant options are ready. Added one local spot to Day 1."),
+                        emptyMessage: L10n.tr("No restaurant matches found for this plan yet."),
                         suggestions: ["/activities", "/save"]
                     )
-                case .activities(let options):
-                    latestActivities = options
-                    appendAgent(
-                        "Activities ready. Inserted one activity in your timeline.",
+                case .activities(let result):
+                    latestActivities = result.items
+                    appendToolMessage(
+                        result: result,
+                        successMessage: L10n.tr("Activity options are ready. Added one activity to your timeline."),
+                        emptyMessage: L10n.tr("No activities matched this plan yet."),
                         suggestions: ["/addday", "/save"]
                     )
                 }
             }
         }
+    }
+
+    private func appendToolMessage<Item: Hashable & Sendable>(
+        result: ToolSearchResult<Item>,
+        successMessage: String,
+        emptyMessage: String,
+        suggestions: [String]
+    ) {
+        if let message = result.message, !message.isEmpty {
+            appendAgent(message, suggestions: suggestions)
+            return
+        }
+
+        if result.items.isEmpty {
+            appendAgent(emptyMessage, suggestions: suggestions)
+            return
+        }
+
+        appendAgent(successMessage, suggestions: suggestions)
     }
 
     private func selectedDestinationSnapshot(in homeViewModel: HomeViewModel) -> DestinationSnapshot? {
@@ -354,7 +377,7 @@ final class PlannerViewModel {
     private func normalizeDays() {
         for index in draft.timeline.indices {
             draft.timeline[index].dayIndex = index + 1
-            draft.timeline[index].title = "Day \(index + 1)"
+            draft.timeline[index].title = L10n.f("Day %lld", index + 1)
         }
     }
 
@@ -364,7 +387,7 @@ final class PlannerViewModel {
             let destinationId = draft.destinationId ?? homeViewModel.recommendations.first?.destination.id,
             let destination = homeViewModel.destinations.first(where: { $0.id == destinationId })
         else {
-            appendAgent("Pick a destination before saving.", suggestions: ["/destination Lisbon"])
+            appendAgent(L10n.tr("Pick a destination before saving."), suggestions: ["/destination Lisbon"])
             return
         }
 
@@ -453,14 +476,14 @@ final class PlannerViewModel {
         do {
             try context.save()
             homeViewModel.load(context: context, bootstrap: bootstrap)
-            appendAgent("Trip saved. It is now available in Your Trips.")
+            appendAgent(L10n.tr("Trip saved. It is now available in Your Trips."))
         } catch {
-            appendAgent("Save failed. I could not persist this draft locally.")
+            appendAgent(L10n.tr("Save failed. I could not persist this draft locally."))
         }
     }
 
     private func appendAgent(_ text: String, suggestions: [String] = []) {
-        agentMessages.append(AgentMessage(title: "Agent", body: text, isUser: false, suggestions: suggestions))
+        agentMessages.append(AgentMessage(title: L10n.tr("Agent"), body: text, isUser: false, suggestions: suggestions))
     }
 
     private func selectedDestination(in homeViewModel: HomeViewModel) -> Destination? {

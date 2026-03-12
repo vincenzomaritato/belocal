@@ -26,13 +26,13 @@ struct PlannerSuggestionPrefill: Equatable {
 
     var interestsLabel: String {
         if interests.isEmpty {
-            return "Culture + food"
+            return L10n.tr("Culture + Food")
         }
-        return interests.joined(separator: " + ")
+        return interests.map(L10n.style).joined(separator: " + ")
     }
 
     var budgetLabel: String {
-        "Comfort ~\(estimatedBudget) EUR"
+        L10n.f("Comfort ~%d EUR", estimatedBudget)
     }
 
     var plannerPrompt: String {

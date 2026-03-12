@@ -17,10 +17,10 @@ final class SettingsViewModel {
 
         var title: String {
             switch self {
-            case .essential: return "Essential"
-            case .comfort: return "Comfort"
-            case .premium: return "Premium"
-            case .luxury: return "Luxury"
+            case .essential: return L10n.tr("Essential")
+            case .comfort: return L10n.tr("Comfort")
+            case .premium: return L10n.tr("Premium")
+            case .luxury: return L10n.tr("Luxury")
             }
         }
 
@@ -47,9 +47,9 @@ final class SettingsViewModel {
 
         var title: String {
             switch self {
-            case .low: return "Low"
-            case .balanced: return "Balanced"
-            case .high: return "High"
+            case .low: return L10n.tr("Low")
+            case .balanced: return L10n.tr("Balanced")
+            case .high: return L10n.tr("High")
             }
         }
 
@@ -73,11 +73,11 @@ final class SettingsViewModel {
 
         var title: String {
             switch self {
-            case .balanced: return "Balanced"
-            case .culture: return "Culture Focus"
-            case .food: return "Food Focus"
-            case .nature: return "Nature Focus"
-            case .beach: return "Beach Focus"
+            case .balanced: return L10n.tr("Balanced")
+            case .culture: return L10n.tr("Culture")
+            case .food: return L10n.tr("Food")
+            case .nature: return L10n.tr("Nature")
+            case .beach: return L10n.tr("Beach")
             }
         }
 
@@ -102,8 +102,8 @@ final class SettingsViewModel {
     var budgetMax: Double = 3000
     var ecoSensitivity: Double = 0.7
     var peopleDefault: Int = 2
-    var homeCity: String = "Rome"
-    var homeCountry: String = "Italy"
+    var homeCity: String = ""
+    var homeCountry: String = ""
     var homeLatitude: Double = TravelDistanceCalculator.defaultHomeLatitude
     var homeLongitude: Double = TravelDistanceCalculator.defaultHomeLongitude
     var preferredSeasons: Set<String> = ["Spring", "Autumn"]
@@ -113,9 +113,37 @@ final class SettingsViewModel {
         "Nature": 0.25,
         "Beach": 0.2
     ]
-    var homeLocationLabel = "Not set"
+    var homeLocationLabel = SettingsViewModel.unsetLabel
 
     var saveMessage: String?
+    var saveMessageIsError = false
+
+    static let seasonOrder = ["Spring", "Summer", "Autumn", "Winter"]
+    static let defaultProfileName = "Traveler"
+
+    static var unsetLabel: String {
+        L10n.tr("Not set")
+    }
+
+    static func seasonTitle(for season: String) -> String {
+        switch season {
+        case "Spring": return L10n.tr("Spring")
+        case "Summer": return L10n.tr("Summer")
+        case "Autumn": return L10n.tr("Autumn")
+        case "Winter": return L10n.tr("Winter")
+        default: return season
+        }
+    }
+
+    static func styleCategoryTitle(for key: String) -> String {
+        switch key {
+        case "Culture": return L10n.tr("Culture")
+        case "Food": return L10n.tr("Food")
+        case "Nature": return L10n.tr("Nature")
+        case "Beach": return L10n.tr("Beach")
+        default: return key
+        }
+    }
 
     func load(from profile: UserProfile?) {
         guard let profile else { return }
@@ -124,8 +152,8 @@ final class SettingsViewModel {
         budgetMax = profile.budgetMax
         ecoSensitivity = profile.ecoSensitivity
         peopleDefault = profile.peopleDefault
-        homeCity = profile.homeCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Rome" : profile.homeCity
-        homeCountry = profile.homeCountry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Italy" : profile.homeCountry
+        homeCity = profile.homeCity
+        homeCountry = profile.homeCountry
         homeLatitude = profile.homeLatitude
         homeLongitude = profile.homeLongitude
         preferredSeasons = Set(profile.preferredSeasons)
@@ -148,44 +176,60 @@ final class SettingsViewModel {
             if bootstrap.supabaseSyncService.config.isConfigured {
                 bootstrap.syncManager.enqueue(
                     type: .upsertProfile,
-                    payload: profileSyncPayload(for: profile),
+                    payload: profileSyncPayload(
+                        for: profile,
+                        authUserID: bootstrap.settingsStore.authenticatedUserID
+                    ),
                     context: context
                 )
-                saveMessage = "Profile saved. Supabase sync is in queue."
+                saveMessage = L10n.tr("Profile saved. Supabase sync is in queue.")
             } else {
-                saveMessage = "Profile saved locally. Supabase sync is not configured."
+                saveMessage = L10n.tr("Profile saved locally. Supabase sync is not configured.")
             }
+            saveMessageIsError = false
 
             homeViewModel.load(context: context, bootstrap: bootstrap)
         } catch {
-            saveMessage = "Could not save profile changes. Try again."
+            saveMessage = L10n.tr("Could not save profile changes. Try again.")
+            saveMessageIsError = true
         }
     }
 
     func applyDraft(to profile: UserProfile?) {
         guard let profile else { return }
-        profile.name = profileName.isEmpty ? "Traveler" : profileName
+        profile.name = profileName.isEmpty ? Self.defaultProfileName : profileName
         profile.budgetMin = min(budgetMin, budgetMax)
         profile.budgetMax = max(budgetMin, budgetMax)
         profile.ecoSensitivity = ecoSensitivity
         profile.peopleDefault = peopleDefault
-        profile.homeCity = homeCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Rome" : homeCity
-        profile.homeCountry = homeCountry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Italy" : homeCountry
+        profile.homeCity = homeCity.trimmingCharacters(in: .whitespacesAndNewlines)
+        profile.homeCountry = homeCountry.trimmingCharacters(in: .whitespacesAndNewlines)
         profile.homeLatitude = clamp(homeLatitude, min: -90, max: 90)
         profile.homeLongitude = clamp(homeLongitude, min: -180, max: 180)
         profile.preferredSeasons = Array(preferredSeasons)
         profile.travelStyleWeights = normalized(weights: styleWeights)
     }
 
-    func resetLocalData(context: ModelContext, bootstrap: AppBootstrap, homeViewModel: HomeViewModel) {
-        do {
-            try bootstrap.initialDataService.clearLocalData(context: context)
-            homeViewModel.load(context: context, bootstrap: bootstrap)
-            load(from: homeViewModel.userProfile)
-            saveMessage = "Local data reset complete."
-        } catch {
-            saveMessage = "Could not reset local data. Try again."
-        }
+    func resetState() {
+        profileName = ""
+        budgetMin = 1000
+        budgetMax = 3000
+        ecoSensitivity = 0.7
+        peopleDefault = 2
+        homeCity = ""
+        homeCountry = ""
+        homeLatitude = TravelDistanceCalculator.defaultHomeLatitude
+        homeLongitude = TravelDistanceCalculator.defaultHomeLongitude
+        preferredSeasons = ["Spring", "Autumn"]
+        styleWeights = [
+            "Culture": 0.3,
+            "Food": 0.25,
+            "Nature": 0.25,
+            "Beach": 0.2
+        ]
+        homeLocationLabel = Self.unsetLabel
+        saveMessage = nil
+        saveMessageIsError = false
     }
 
     private func normalized(weights: [String: Double]) -> [String: Double] {
@@ -198,9 +242,11 @@ final class SettingsViewModel {
         Swift.min(Swift.max(value, lower), upper)
     }
 
-    private func profileSyncPayload(for profile: UserProfile) -> [String: String] {
+    private func profileSyncPayload(for profile: UserProfile, authUserID: String) -> [String: String] {
+        let normalizedAuthUserID = authUserID.trimmingCharacters(in: .whitespacesAndNewlines)
         [
             "profileId": profile.id.uuidString,
+            "authUserId": normalizedAuthUserID,
             "name": profile.name,
             "budgetMin": String(format: "%.0f", profile.budgetMin),
             "budgetMax": String(format: "%.0f", profile.budgetMax),
@@ -221,20 +267,20 @@ final class SettingsViewModel {
         homeLongitude = clamp(longitude, min: -180, max: 180)
         let trimmedCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedCountry = country.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedCity.isEmpty {
-            homeCity = trimmedCity
-        }
-        if !trimmedCountry.isEmpty {
-            homeCountry = trimmedCountry
-        }
-        homeLocationLabel = label
+        homeCity = trimmedCity
+        homeCountry = trimmedCountry
+        let fallbackLabel = [trimmedCity, trimmedCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+        homeLocationLabel = label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? (fallbackLabel.isEmpty ? Self.unsetLabel : fallbackLabel)
+            : label
     }
 
     func refreshHomeLocationLabel() async {
         let location = CLLocation(latitude: homeLatitude, longitude: homeLongitude)
         if #available(iOS 26.0, *) {
             guard let request = MKReverseGeocodingRequest(location: location) else {
-                homeLocationLabel = [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+                let fallback = [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+                homeLocationLabel = fallback.isEmpty ? Self.unsetLabel : fallback
                 return
             }
 
@@ -253,7 +299,8 @@ final class SettingsViewModel {
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                         .filter { !$0.isEmpty }
                         .joined(separator: ", ")
-                    homeLocationLabel = composed.isEmpty ? [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ") : composed
+                    let fallback = [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+                    homeLocationLabel = composed.isEmpty ? (fallback.isEmpty ? Self.unsetLabel : fallback) : composed
                     return
                 }
             } catch {
@@ -273,7 +320,8 @@ final class SettingsViewModel {
                         homeCountry = country
                     }
                     let composed = [city, country].filter { !$0.isEmpty }.joined(separator: ", ")
-                    homeLocationLabel = composed.isEmpty ? [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ") : composed
+                    let fallback = [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+                    homeLocationLabel = composed.isEmpty ? (fallback.isEmpty ? Self.unsetLabel : fallback) : composed
                     return
                 }
             } catch {
@@ -281,7 +329,8 @@ final class SettingsViewModel {
             }
         }
 
-        homeLocationLabel = [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+        let fallback = [homeCity, homeCountry].filter { !$0.isEmpty }.joined(separator: ", ")
+        homeLocationLabel = fallback.isEmpty ? Self.unsetLabel : fallback
     }
 
     var selectedBudgetPreset: BudgetPreset {
@@ -353,17 +402,17 @@ final class SettingsViewModel {
     }
 
     var seasonsSummary: String {
-        guard !preferredSeasons.isEmpty else { return "Not set" }
-        if preferredSeasons.count == 4 { return "All year" }
-        return preferredSeasons.sorted().joined(separator: ", ")
+        guard !preferredSeasons.isEmpty else { return Self.unsetLabel }
+        if preferredSeasons.count == 4 { return L10n.tr("All year") }
+        return preferredSeasons.sorted().map(Self.seasonTitle(for:)).joined(separator: ", ")
     }
 
     var styleSummary: String {
         let summary = normalized(weights: styleWeights)
             .sorted { $0.value > $1.value }
             .prefix(2)
-            .map(\.key)
+            .map { Self.styleCategoryTitle(for: $0.key) }
             .joined(separator: " + ")
-        return summary.isEmpty ? "Balanced" : summary
+        return summary.isEmpty ? L10n.tr("Balanced") : summary
     }
 }

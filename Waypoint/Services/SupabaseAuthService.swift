@@ -194,22 +194,69 @@ extension SupabaseServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "Supabase is not configured."
+            return L10n.tr("Supabase is not configured. Add a valid publishable key to SupabaseConfig.plist.")
         case .notAuthenticated:
-            return "No active Supabase session."
+            return L10n.tr("No active Supabase session.")
         case .unsupportedPayload:
-            return "Payload is not valid for Supabase sync."
+            return L10n.tr("Payload is not valid for Supabase sync.")
         case .invalidURL:
-            return "Supabase URL is invalid."
+            return L10n.tr("Supabase URL is invalid.")
         case .invalidResponse:
-            return "Supabase response is invalid."
+            return L10n.tr("Supabase response is invalid.")
         case .emailConfirmationRequired:
-            return "Account created. Confirm your email, then sign in."
+            return L10n.tr("Account created. Confirm your email, then sign in.")
         case .requestFailed(let statusCode, let body):
-            if statusCode == 400 || statusCode == 401 {
-                return "Authentication failed. Check email/password."
+            if let friendlyMessage = Self.friendlyMessage(forStatusCode: statusCode, body: body) {
+                return friendlyMessage
             }
-            return "Supabase request failed (\(statusCode)). \(body)"
+            if let backendMessage = Self.backendMessage(from: body), !backendMessage.isEmpty {
+                return L10n.f("Supabase request failed (%d). %@", statusCode, backendMessage)
+            }
+            return L10n.f("Supabase request failed (%d). %@", statusCode, body)
         }
+    }
+
+    private static func friendlyMessage(forStatusCode statusCode: Int, body: String) -> String? {
+        let backendMessage = backendMessage(from: body)?.lowercased() ?? ""
+        let normalizedBody = body.lowercased()
+        let combined = "\(backendMessage) \(normalizedBody)"
+
+        if combined.contains("user already registered") || combined.contains("user_already_exists") {
+            return L10n.tr("An account with this email already exists. Sign in instead.")
+        }
+
+        if combined.contains("email not confirmed") || combined.contains("email_not_confirmed") {
+            return L10n.tr("Confirm your email before signing in.")
+        }
+
+        if combined.contains("invalid api key") || combined.contains("invalid api_key") || combined.contains("publishable key") {
+            return L10n.tr("Supabase is not configured. Add a valid publishable key to SupabaseConfig.plist.")
+        }
+
+        if statusCode == 400 || statusCode == 401 {
+            return L10n.tr("Authentication failed. Check email/password.")
+        }
+
+        return nil
+    }
+
+    private static func backendMessage(from body: String) -> String? {
+        guard let data = body.data(using: .utf8) else {
+            return nil
+        }
+
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        for key in ["message", "error_description", "msg", "error", "code"] {
+            if let value = object[key] as? String, !value.isEmpty {
+                return value
+            }
+        }
+
+        return nil
     }
 }

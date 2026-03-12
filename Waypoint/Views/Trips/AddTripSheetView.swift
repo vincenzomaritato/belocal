@@ -15,8 +15,8 @@ struct AddTripSheetView: View {
 
         var label: String {
             switch self {
-            case .been: return "Past trip"
-            case .wantToGo: return "Future trip"
+            case .been: return L10n.tr("Past trip")
+            case .wantToGo: return L10n.tr("Future trip")
             }
         }
     }
@@ -45,14 +45,14 @@ struct AddTripSheetView: View {
 
         var label: String {
             switch self {
-            case .africa: return "Africa"
-            case .europe: return "Europe"
-            case .asia: return "Asia"
-            case .northAmerica: return "North America"
-            case .southAmerica: return "South America"
-            case .oceania: return "Oceania"
-            case .antarctica: return "Antarctica"
-            case .other: return "Other"
+            case .africa: return L10n.tr("Africa")
+            case .europe: return L10n.tr("Europe")
+            case .asia: return L10n.tr("Asia")
+            case .northAmerica: return L10n.tr("North America")
+            case .southAmerica: return L10n.tr("South America")
+            case .oceania: return L10n.tr("Oceania")
+            case .antarctica: return L10n.tr("Antarctica")
+            case .other: return L10n.tr("Other")
             }
         }
 
@@ -165,7 +165,7 @@ struct AddTripSheetView: View {
                     detailsStepScrollContent
                 }
             }
-            .navigationTitle("Add Trip")
+            .navigationTitle(L10n.tr("Add Trip"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -184,8 +184,8 @@ struct AddTripSheetView: View {
                     }
                     .tint(.accentColor)
                     .disabled(!canSave || currentStep != .details)
-                    .accessibilityLabel("Save trip")
-                    .accessibilityHint("Saves this trip with destination and details")
+                    .accessibilityLabel(L10n.tr("Save trip"))
+                    .accessibilityHint(L10n.tr("Saves this trip with destination and details"))
                 }
             }
             .textInputAutocapitalization(.words)
@@ -229,7 +229,7 @@ struct AddTripSheetView: View {
     }
 
     private var activeSearchPrompt: String {
-        selectedCountry == nil ? "Filter countries" : "Filter cities"
+        selectedCountry == nil ? L10n.tr("Filter countries") : L10n.tr("Filter cities")
     }
 
     private func intentSymbol(for intent: TravelIntent) -> String {
@@ -271,11 +271,11 @@ struct AddTripSheetView: View {
                     }
                 }
             } else {
-                Section("Selected Country") {
+                Section(L10n.tr("Selected Country")) {
                     selectedCountryListRow
                 }
 
-                Section("Cities") {
+                Section(L10n.tr("Cities")) {
                     if isFetchingCities {
                         citiesLoadingSkeleton
                     } else if citySuggestions.isEmpty {
@@ -292,7 +292,7 @@ struct AddTripSheetView: View {
             if let errorMessage {
                 Section {
                     ActionableErrorCard(
-                        title: "Something went wrong",
+                        title: L10n.tr("Something went wrong"),
                         message: errorMessage,
                         retryAction: { retryAfterError() },
                         offlineAction: { workOfflineAfterError() },
@@ -316,7 +316,7 @@ struct AddTripSheetView: View {
 
                 if let errorMessage {
                     ActionableErrorCard(
-                        title: "Something went wrong",
+                        title: L10n.tr("Something went wrong"),
                         message: errorMessage,
                         retryAction: { retryAfterError() },
                         offlineAction: { workOfflineAfterError() },
@@ -354,18 +354,18 @@ struct AddTripSheetView: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(currentStep == .location ? "Trip setup" : "Final details")
+                    Text(currentStep == .location ? L10n.tr("Trip setup") : L10n.tr("Final details"))
                         .font(.headline)
                     Text(currentStep == .location
-                         ? "Choose country and city, then continue with travel details."
-                         : "Review details and save this trip to your timeline.")
+                         ? L10n.tr("Choose country and city, then continue with travel details.")
+                         : L10n.tr("Review details and save this trip to your timeline."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: 0)
 
-                Text("\(progressPercentage)%")
+                Text(L10n.f("%d%%", progressPercentage))
                     .font(.caption.weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -380,13 +380,13 @@ struct AddTripSheetView: View {
         }
         .addTripCardSurface()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Trip setup progress")
-        .accessibilityValue("\(progressPercentage) percent complete")
+        .accessibilityLabel(L10n.tr("Trip setup progress"))
+        .accessibilityValue(L10n.f("%lld percent complete", progressPercentage))
     }
 
     private var selectedCountryListRow: some View {
         LabeledContent {
-            Button("Change") {
+            Button(L10n.tr("Change")) {
                 selectedCountry = nil
                 currentStep = .location
             }
@@ -411,7 +411,7 @@ struct AddTripSheetView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader(title: "Trip type", subtitle: "Classify this destination for planning")
 
-            Picker("Trip type", selection: $travelIntent) {
+            Picker(L10n.tr("Trip type"), selection: $travelIntent) {
                 ForEach(TravelIntent.allCases, id: \.self) { intent in
                     Text(intent.label).tag(intent)
                 }
@@ -425,8 +425,8 @@ struct AddTripSheetView: View {
                     .appSymbolPulse(value: travelIntent)
                     .accessibilityHidden(true)
                 Text(travelIntent == .been
-                     ? "This trip already happened."
-                     : "This trip is a planned destination.")
+                     ? L10n.tr("This trip already happened.")
+                     : L10n.tr("This trip is a planned destination."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -439,7 +439,7 @@ struct AddTripSheetView: View {
             sectionHeader(title: "Country", subtitle: "Search and refine cities inside this country")
 
             LabeledContent {
-                Button("Change") {
+                Button(L10n.tr("Change")) {
                     selectedCountry = nil
                     currentStep = .location
                 }
@@ -460,7 +460,7 @@ struct AddTripSheetView: View {
             sectionHeader(title: "Destination", subtitle: "Selected city for this trip")
 
             LabeledContent {
-                Button("Change") {
+                Button(L10n.tr("Change")) {
                     currentStep = .location
                 }
                 .buttonStyle(.borderless)
@@ -483,12 +483,12 @@ struct AddTripSheetView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Schedule", systemImage: "calendar")
+                    Label(L10n.tr("Schedule"), systemImage: "calendar")
                         .foregroundStyle(.secondary)
 
                     Spacer()
 
-                    Text("\(tripNights) nights")
+                    Text(L10n.f("%lld nights", tripNights))
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -497,7 +497,7 @@ struct AddTripSheetView: View {
                 }
 
                 DatePicker(
-                    "Departure",
+                    L10n.tr("Departure"),
                     selection: $tripStartDate,
                     displayedComponents: .date
                 )
@@ -508,7 +508,7 @@ struct AddTripSheetView: View {
                 }
 
                 DatePicker(
-                    "Return",
+                    L10n.tr("Return"),
                     selection: $tripEndDate,
                     in: tripStartDate...,
                     displayedComponents: .date
@@ -517,7 +517,7 @@ struct AddTripSheetView: View {
             .tripDetailInsetSurface()
 
             VStack(alignment: .leading, spacing: 10) {
-                Label("Transport", systemImage: "airplane")
+                Label(L10n.tr("Transport"), systemImage: "airplane")
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 8) {
@@ -530,7 +530,7 @@ struct AddTripSheetView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Label("Travelers", systemImage: "person.2.fill")
+                    Label(L10n.tr("Travelers"), systemImage: "person.2.fill")
                         .foregroundStyle(.secondary)
 
                     Spacer()
@@ -553,7 +553,7 @@ struct AddTripSheetView: View {
                         .fill(Color(uiColor: .systemBackground))
                         .frame(height: 36)
                         .overlay(
-                            Text("\(tripPeople) travelers")
+                            Text(L10n.f("%lld travelers", tripPeople))
                                 .font(.subheadline.weight(.semibold))
                                 .monospacedDigit()
                                 .appNumericTextTransition(Double(tripPeople))
@@ -569,7 +569,7 @@ struct AddTripSheetView: View {
                 Divider()
 
                 HStack {
-                    Label("Budget", systemImage: "creditcard.fill")
+                    Label(L10n.tr("Budget"), systemImage: "creditcard.fill")
                         .foregroundStyle(.secondary)
 
                     Spacer()
@@ -584,15 +584,15 @@ struct AddTripSheetView: View {
                 Slider(value: $tripBudget, in: budgetSliderRange, step: 50)
                     .tint(.accentColor)
 
-                TextField("Custom amount", value: $tripBudget, format: .number.precision(.fractionLength(0...2)))
+                TextField(L10n.tr("Custom amount"), value: $tripBudget, format: .number.precision(.fractionLength(0...2)))
                     .keyboardType(.decimalPad)
                     .textFieldStyle(.roundedBorder)
 
                 HStack {
-                    Label("Estimated CO2", systemImage: "leaf.fill")
+                    Label(L10n.tr("Estimated CO2"), systemImage: "leaf.fill")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("\(liveCo2Estimate) kg")
+                    Text(L10n.f("%lld kg", liveCo2Estimate))
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -647,7 +647,7 @@ struct AddTripSheetView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .appSymbolPulse(value: isSelected)
 
-                Text(transportType.rawValue.capitalized)
+                Text(transportType.localizedTitle)
                     .font(.caption.weight(.semibold))
             }
             .foregroundStyle(isSelected ? Color.accentColor : .secondary)
@@ -666,9 +666,10 @@ struct AddTripSheetView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(transportType.rawValue.capitalized) transport")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Choose transport type for this trip")
+        .accessibilityTapTarget()
+        .accessibilityLabel(L10n.f("%@ transport", transportType.localizedTitle))
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Choose transport type for this trip"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -690,15 +691,15 @@ struct AddTripSheetView: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.45)
-        .accessibilityLabel(symbol == "minus" ? "Decrease travelers" : "Increase travelers")
-        .accessibilityHint("Adjust number of travelers")
+        .accessibilityLabel(symbol == "minus" ? L10n.tr("Decrease travelers") : L10n.tr("Increase travelers"))
+        .accessibilityHint(L10n.tr("Adjust number of travelers"))
     }
 
     private func sectionHeader(title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(L10n.tr(title))
                 .font(.headline)
-            Text(subtitle)
+            Text(L10n.tr(subtitle))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -725,10 +726,11 @@ struct AddTripSheetView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityTapTarget()
         .foregroundStyle(.primary)
-        .accessibilityLabel("Country \(entry.name)")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Select this country to load available cities")
+        .accessibilityLabel(L10n.f("Country %@", entry.name))
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Select this country to load available cities"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -771,9 +773,9 @@ struct AddTripSheetView: View {
             }
         }
         .foregroundStyle(.primary)
-        .accessibilityLabel("City \(suggestion.name), \(cityCountryLabel(for: suggestion))")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Select this city and continue to trip details")
+        .accessibilityLabel(L10n.f("City %@, %@", suggestion.name, cityCountryLabel(for: suggestion)))
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Select this city and continue to trip details"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -808,15 +810,15 @@ struct AddTripSheetView: View {
         ) {
             citySuggestions = localSuggestions
             isFetchingCities = false
-            errorMessage = "Offline mode enabled. Showing local city data."
+            errorMessage = L10n.tr("Offline mode enabled. Showing local city data.")
             return
         }
 
-        errorMessage = "Offline mode enabled. No local city data found for this country."
+        errorMessage = L10n.tr("Offline mode enabled. No local city data found for this country.")
     }
 
     private func contactSupport(errorMessage: String) {
-        let subject = "Waypoint trip setup support"
+        let subject = "BeLocal trip setup support"
         let body = "Screen: Add trip\nError: \(errorMessage)"
         guard let url = SupportContact.emailURL(subject: subject, body: body) else { return }
         openURL(url)
@@ -906,7 +908,7 @@ struct AddTripSheetView: View {
                 await MainActor.run {
                     citySuggestions = []
                     isFetchingCities = false
-                    errorMessage = "Unable to load cities from Apple Maps. \(error.localizedDescription)"
+                    errorMessage = L10n.f("Unable to load cities from Apple Maps. %@", error.localizedDescription)
                 }
             }
         }
@@ -1045,7 +1047,7 @@ struct AddTripSheetView: View {
         }
 
         if requireAtLeastOneSuccess && !hasAtLeastOneSuccess {
-            throw lastError ?? NSError(domain: "AppleSearch", code: -1, userInfo: nil)
+            throw lastError ?? NSError(domain: "AppleSearch", code: -1, userInfo: [NSLocalizedDescriptionKey: L10n.tr("Apple Maps city search failed.")])
         }
 
         return merged
@@ -1053,11 +1055,11 @@ struct AddTripSheetView: View {
 
     private func saveTrip() {
         guard let profile = homeViewModel.userProfile else {
-            errorMessage = "Missing user profile. Open Settings first."
+            errorMessage = L10n.tr("Missing user profile. Open Settings first.")
             return
         }
         guard let selectedCity else {
-            errorMessage = "Choose a city first."
+            errorMessage = L10n.tr("Choose a city first.")
             return
         }
 
@@ -1086,6 +1088,7 @@ struct AddTripSheetView: View {
             startDate: startDate,
             endDate: endDate,
             transportType: tripTransportType,
+            tripIntent: travelIntent == .been ? .been : .wantToGo,
             people: people,
             budgetSpent: budget,
             co2Estimated: co2,
@@ -1135,7 +1138,7 @@ struct AddTripSheetView: View {
             onSaved()
             dismiss()
         } catch {
-            errorMessage = "Failed to save trip."
+            errorMessage = L10n.tr("Failed to save trip.")
             isSaving = false
         }
     }

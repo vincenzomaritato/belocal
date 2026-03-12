@@ -10,6 +10,7 @@ struct TripDetailView: View {
     @Bindable var homeViewModel: HomeViewModel
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var translatedFeedbackByID: [UUID: FeedbackTranslationContent] = [:]
 
     private var feedbackLocationOptions: [FeedbackLocationOption] {
         let now = Date()
@@ -43,11 +44,11 @@ struct TripDetailView: View {
     }
 
     private var destinationName: String {
-        viewModel.destination?.name ?? "Trip"
+        viewModel.destination?.name ?? L10n.tr("Trip")
     }
 
     private var destinationCountry: String {
-        viewModel.destination?.country ?? "Destination"
+        viewModel.destination?.country ?? L10n.tr("Destination")
     }
 
     private var tripDays: Int {
@@ -61,10 +62,10 @@ struct TripDetailView: View {
     private var tripTags: [String] {
         var raw: [String] = []
         if let destination = viewModel.destination {
-            raw.append(contentsOf: destination.styles.prefix(3))
+            raw.append(contentsOf: destination.styles.prefix(3).map(L10n.style))
         }
-        raw.append(viewModel.trip.transportType.rawValue.capitalized)
-        raw.append(viewModel.trip.people == 1 ? "Solo" : "\(viewModel.trip.people) Travelers")
+        raw.append(viewModel.trip.transportType.localizedTitle)
+        raw.append(viewModel.trip.people == 1 ? L10n.tr("Solo") : L10n.f("%d Travelers", viewModel.trip.people))
 
         var seen = Set<String>()
         let deduped = raw.filter { seen.insert($0).inserted }
@@ -90,7 +91,6 @@ struct TripDetailView: View {
                     titleMetaBlock
                     dividerLine
                     snapshotSection
-                    timelineSection
                     activitiesSection
                     feedbackSummarySection
                 }
@@ -99,30 +99,33 @@ struct TripDetailView: View {
                 .padding(.bottom, 28)
             }
         }
-        .navigationTitle("Trip Details")
+        .navigationTitle(L10n.tr("Trip Details"))
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: feedbackTranslationTaskID) {
+            await refreshFeedbackTranslations()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Leave Feedback") {
+                    Button(L10n.tr("Leave Feedback")) {
                         viewModel.feedbackDraft.selectedTripId = nil
                         viewModel.showFeedbackSheet = true
                     }
 
                     Divider()
 
-                    Button("Edit Trip") {
+                    Button(L10n.tr("Edit Trip")) {
                         showEditSheet = true
                     }
 
-                    Button("Delete Trip", role: .destructive) {
+                    Button(L10n.tr("Delete Trip"), role: .destructive) {
                         showDeleteConfirmation = true
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .accessibilityLabel("Trip actions")
-                .accessibilityHint("Open options to leave feedback, edit, or delete this trip")
+                .accessibilityLabel(L10n.tr("Trip actions"))
+                .accessibilityHint(L10n.tr("Open options to leave feedback, edit, or delete this trip"))
             }
         }
         .onAppear {
@@ -153,23 +156,23 @@ struct TripDetailView: View {
             }
         }
         .confirmationDialog(
-            "Delete this trip?",
+            L10n.tr("Delete this trip?"),
             isPresented: $showDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete Trip", role: .destructive) {
+            Button(L10n.tr("Delete Trip"), role: .destructive) {
                 deleteTrip()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.tr("Cancel"), role: .cancel) {}
         } message: {
-            Text("This removes the trip and all related activities/feedback.")
+            Text(L10n.tr("This removes the trip and all related activities/feedback."))
         }
-        .alert("Operation failed", isPresented: tripMutationErrorBinding) {
-            Button("OK", role: .cancel) {
+        .alert(L10n.tr("Operation failed"), isPresented: tripMutationErrorBinding) {
+            Button(L10n.tr("OK"), role: .cancel) {
                 viewModel.tripMutationError = nil
             }
         } message: {
-            Text(viewModel.tripMutationError ?? "Something went wrong.")
+            Text(viewModel.tripMutationError ?? L10n.tr("Something went wrong."))
         }
     }
 
@@ -211,7 +214,7 @@ struct TripDetailView: View {
 
                 HStack(spacing: 10) {
                     heroPill(icon: "calendar", text: dateRangeLabel)
-                    heroPill(icon: viewModel.trip.transportType.iconName, text: viewModel.trip.transportType.rawValue.capitalized)
+                    heroPill(icon: viewModel.trip.transportType.iconName, text: viewModel.trip.transportType.localizedTitle)
                 }
             }
             .padding(16)
@@ -256,7 +259,7 @@ struct TripDetailView: View {
 
     private var titleMetaBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Your \(tripDays)-Day Plan in \(destinationName)")
+            Text(L10n.f("Your %d-Day Plan in %@", tripDays, destinationName))
                 .font(.system(size: 40, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.84)
                 .lineSpacing(2)
@@ -265,36 +268,36 @@ struct TripDetailView: View {
             HStack(spacing: 14) {
                 metaItem(icon: "eurosign.circle", text: "€\(Int(viewModel.trip.budgetSpent.rounded()))")
                 metaDivider
-                metaItem(icon: "map", text: "\(tripDays) days")
+                metaItem(icon: "map", text: L10n.f("%d days", tripDays))
                 metaDivider
-                metaItem(icon: "leaf", text: "\(Int(viewModel.trip.co2Estimated.rounded()))kg CO2")
+                metaItem(icon: "leaf", text: L10n.f("%dkg CO2", Int(viewModel.trip.co2Estimated.rounded())))
             }
         }
     }
 
     private var snapshotSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Trip Snapshot")
+            sectionTitle(L10n.tr("Trip Snapshot"))
 
             HStack(spacing: 8) {
-                infoBadge(text: viewModel.trip.transportType.rawValue.capitalized, icon: viewModel.trip.transportType.iconName)
-                infoBadge(text: "\(viewModel.trip.people) people", icon: "person.2.fill")
-                infoBadge(text: "Eco \(Int(viewModel.trip.ecoScoreSnapshot.rounded()))", icon: "leaf.fill")
+                infoBadge(text: viewModel.trip.transportType.localizedTitle, icon: viewModel.trip.transportType.iconName)
+                infoBadge(text: L10n.f("%d people", viewModel.trip.people), icon: "person.2.fill")
+                infoBadge(text: L10n.f("Eco %d", Int(viewModel.trip.ecoScoreSnapshot.rounded())), icon: "leaf.fill")
             }
 
-            Label("Date range: \(dateRangeLabel)", systemImage: "calendar")
+            Label(L10n.f("Date range: %@", dateRangeLabel), systemImage: "calendar")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Label("Budget spent: €\(Int(viewModel.trip.budgetSpent.rounded()))", systemImage: "wallet.pass.fill")
+            Label(L10n.f("Budget spent: €%d", Int(viewModel.trip.budgetSpent.rounded())), systemImage: "wallet.pass.fill")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Label("Estimated emissions: \(Int(viewModel.trip.co2Estimated.rounded())) kg CO2", systemImage: "aqi.medium")
+            Label(L10n.f("Estimated emissions: %d kg CO2", Int(viewModel.trip.co2Estimated.rounded())), systemImage: "aqi.medium")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Eco score")
+                    Text(L10n.tr("Eco score"))
                         .font(.subheadline.weight(.semibold))
                     Spacer()
                     Text("\(Int(viewModel.trip.ecoScoreSnapshot.rounded())) / 100")
@@ -310,48 +313,12 @@ struct TripDetailView: View {
         .background(cardBackground)
     }
 
-    private var timelineSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Trip Timeline")
-
-            ForEach(1...tripDays, id: \.self) { day in
-                HStack(spacing: 10) {
-                    Text("Day \(day)")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 62, alignment: .leading)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(timelineDate(for: day))
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                        Text(timelineStatus(for: day))
-                            .font(.subheadline)
-                    }
-
-                    Spacer()
-
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.22))
-                        .frame(width: 10, height: 10)
-                }
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(uiColor: .tertiarySystemGroupedBackground))
-                )
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
-    }
-
     private var activitiesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Saved Activities")
+            sectionTitle(L10n.tr("Saved Activities"))
 
             if viewModel.activities.isEmpty {
-                Text("No activities saved for this trip yet.")
+                Text(L10n.tr("No activities saved for this trip yet."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
@@ -388,10 +355,10 @@ struct TripDetailView: View {
 
     private var feedbackSummarySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Community Feedback")
+            sectionTitle(L10n.tr("Community Feedback"))
 
             if viewModel.feedbackEntries.isEmpty {
-                Text("No feedback yet. Tap Leave Feedback to enrich recommendations.")
+                Text(L10n.tr("No feedback yet. Tap Leave Feedback to enrich recommendations."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
@@ -399,16 +366,17 @@ struct TripDetailView: View {
                 let localCount = viewModel.feedbackEntries.filter { $0.sourceType == .local }.count
                 HStack(spacing: 8) {
                     infoBadge(
-                        text: "\(travelerCount) \(travelerCount == 1 ? "traveler" : "travelers")",
+                        text: travelerCount == 1 ? L10n.f("%d traveler", travelerCount) : L10n.f("%d travelers", travelerCount),
                         icon: FeedbackSourceType.traveler.symbol
                     )
                     infoBadge(
-                        text: "\(localCount) \(localCount == 1 ? "local" : "locals")",
+                        text: localCount == 1 ? L10n.f("%d local", localCount) : L10n.f("%d locals", localCount),
                         icon: FeedbackSourceType.local.symbol
                     )
                 }
 
                 ForEach(viewModel.feedbackEntries, id: \.id) { feedback in
+                    let translatedContent = translatedFeedbackByID[feedback.id]
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             Text(String(repeating: "★", count: feedback.rating))
@@ -427,11 +395,12 @@ struct TripDetailView: View {
                         Text(feedback.perspectiveLabel)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(feedback.text)
+                        Text(translatedContent?.text.nonEmpty ?? feedback.text)
                             .font(.subheadline)
                             .fixedSize(horizontal: false, vertical: true)
-                        if !feedback.tags.isEmpty {
-                            Text(feedback.tags.joined(separator: " • "))
+                        let translatedTags = translatedContent?.tags ?? feedback.tags
+                        if !translatedTags.isEmpty {
+                            Text(translatedTags.joined(separator: " • "))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -456,10 +425,35 @@ struct TripDetailView: View {
         return date.formatted(date: .abbreviated, time: .omitted)
     }
 
+    private var feedbackTranslationTaskID: String {
+        let payload = viewModel.feedbackEntries.map { entry in
+            "\(entry.id.uuidString)|\(entry.text)|\(entry.tags.joined(separator: "||"))"
+        }
+        .joined(separator: ":::")
+        return "\(L10n.preferredLanguageCode)|\(payload)"
+    }
+
+    @MainActor
+    private func refreshFeedbackTranslations() async {
+        let inputs = viewModel.feedbackEntries.map {
+            FeedbackTranslationInput(id: $0.id, text: $0.text, tags: $0.tags)
+        }
+        guard !inputs.isEmpty else {
+            translatedFeedbackByID = [:]
+            return
+        }
+
+        translatedFeedbackByID = await bootstrap.feedbackTranslationService.translate(
+            feedbacks: inputs,
+            targetLanguage: L10n.preferredNarrativeLanguage,
+            languageCode: L10n.preferredLanguageCode
+        )
+    }
+
     private func timelineStatus(for day: Int) -> String {
-        if day == 1 { return "Arrival and orientation" }
-        if day == tripDays { return "Departure and wrap-up" }
-        return "Exploration and planned activities"
+        if day == 1 { return L10n.tr("Arrival and orientation") }
+        if day == tripDays { return L10n.tr("Departure and wrap-up") }
+        return L10n.tr("Exploration and planned activities")
     }
 
     private func infoBadge(text: String, icon: String) -> some View {
@@ -595,6 +589,13 @@ struct TripDetailView: View {
     }
 }
 
+private extension String {
+    var nonEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
 private struct TripEditSheetView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -621,39 +622,39 @@ private struct TripEditSheetView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Dates") {
-                    DatePicker("Start", selection: $startDate, displayedComponents: .date)
+                Section(L10n.tr("Dates")) {
+                    DatePicker(L10n.tr("Start"), selection: $startDate, displayedComponents: .date)
                     DatePicker(
-                        "End",
+                        L10n.tr("End"),
                         selection: $endDate,
                         in: startDate...,
                         displayedComponents: .date
                     )
                 }
 
-                Section("Trip Setup") {
-                    Picker("Transport", selection: $transportType) {
+                Section(L10n.tr("Trip Setup")) {
+                    Picker(L10n.tr("Transport"), selection: $transportType) {
                         ForEach(TransportType.allCases, id: \.rawValue) { type in
-                            Text(type.rawValue.capitalized).tag(type)
+                            Text(type.localizedTitle).tag(type)
                         }
                     }
                     Stepper(value: $people, in: 1...12) {
-                        Text("People: \(people)")
+                        Text(L10n.f("People: %d", people))
                     }
-                    TextField("Budget (€)", text: $budgetText)
+                    TextField(L10n.tr("Budget (€)"), text: $budgetText)
                         .keyboardType(.numberPad)
                 }
             }
-            .navigationTitle("Edit Trip")
+            .navigationTitle(L10n.tr("Edit Trip"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
+                    Button(L10n.tr("Cancel")) {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    Button(L10n.tr("Save")) {
                         let budget = max(0, Double(budgetText.replacingOccurrences(of: ",", with: ".")) ?? 0)
                         onSave(startDate, max(endDate, startDate), transportType, people, budget)
                     }

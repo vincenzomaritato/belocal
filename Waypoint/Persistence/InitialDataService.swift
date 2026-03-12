@@ -25,7 +25,7 @@ final class InitialDataService {
         try context.save()
     }
 
-    func clearLocalData(context: ModelContext) throws {
+    func clearLocalData(context: ModelContext, recreateProfile: Bool = true) throws {
         try context.fetch(FetchDescriptor<SyncOperation>()).forEach(context.delete)
         try context.fetch(FetchDescriptor<TravelerFeedback>()).forEach(context.delete)
         try context.fetch(FetchDescriptor<ActivityItem>()).forEach(context.delete)
@@ -35,6 +35,8 @@ final class InitialDataService {
         try context.fetch(FetchDescriptor<UserProfile>()).forEach(context.delete)
         try context.save()
 
-        try prepare(context: context)
+        if recreateProfile {
+            try prepare(context: context)
+        }
     }
 }

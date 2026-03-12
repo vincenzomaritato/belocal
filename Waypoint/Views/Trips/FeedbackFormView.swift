@@ -82,7 +82,7 @@ struct FeedbackFormView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle("Feedback Studio")
+            .navigationTitle(L10n.tr("Feedback Studio"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -101,8 +101,8 @@ struct FeedbackFormView: View {
                     }
                     .tint(.accentColor)
                     .disabled(viewModel.savingFeedback || selectedTripId == nil)
-                    .accessibilityLabel("Save feedback")
-                    .accessibilityHint("Saves your rating, notes, and destination feedback")
+                    .accessibilityLabel(L10n.tr("Save feedback"))
+                    .accessibilityHint(L10n.tr("Saves your rating, notes, and destination feedback"))
                 }
             }
             .sheet(
@@ -128,9 +128,9 @@ struct FeedbackFormView: View {
                     .appSymbolPulse(value: Int(completionProgress * 100))
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Trip feedback")
+                    Text(L10n.tr("Trip feedback"))
                         .font(.headline)
-                    Text("Help Planner Studio personalize your next recommendations.")
+                    Text(L10n.tr("Help Planner Studio personalize your next recommendations."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -155,7 +155,7 @@ struct FeedbackFormView: View {
                     Image(systemName: selectedLocation.sourceType.symbol)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.accentColor)
-                    Text("Perspective for this destination: \(selectedLocation.perspectiveLabel)")
+                    Text(L10n.f("Perspective for this destination: %@", selectedLocation.perspectiveLabel))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
@@ -167,34 +167,34 @@ struct FeedbackFormView: View {
     private var destinationCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader(
-                title: "Destination",
+                title: L10n.tr("Destination"),
                 subtitle: locationOptions.isEmpty
-                    ? "No completed trips available"
-                    : "\(locationOptions.count) trips available"
+                    ? L10n.tr("No completed trips available")
+                    : L10n.f("%d trips available", locationOptions.count)
             )
 
             if locationOptions.isEmpty {
-                Text("There are no completed trips available.")
+                Text(L10n.tr("There are no completed trips available."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
                 LabeledContent {
-                    Button(selectedLocation == nil ? "Choose" : "Change") {
+                    Button(selectedLocation == nil ? L10n.tr("Choose") : L10n.tr("Change")) {
                         isDestinationPickerPresented = true
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel(selectedLocation == nil ? "Choose destination" : "Change destination")
-                    .accessibilityHint("Opens the list of available trips")
+                    .accessibilityLabel(selectedLocation == nil ? L10n.tr("Choose destination") : L10n.tr("Change destination"))
+                    .accessibilityHint(L10n.tr("Opens the list of available trips"))
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "mappin.and.ellipse")
                             .foregroundStyle(.secondary)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(selectedLocation.map { "\($0.destinationName), \($0.country)" } ?? "No destination selected")
+                            Text(selectedLocation.map { "\($0.destinationName), \($0.country)" } ?? L10n.tr("No destination selected"))
                                 .fontWeight(.semibold)
                                 .foregroundStyle(selectedLocation == nil ? .secondary : .primary)
-                            Text(selectedLocation?.periodLabel ?? "Open destination list")
+                            Text(selectedLocation?.periodLabel ?? L10n.tr("Open destination list"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -223,13 +223,13 @@ struct FeedbackFormView: View {
             List {
                 if filteredLocationOptions.isEmpty {
                     ContentUnavailableView(
-                        "No results",
+                        L10n.tr("No results"),
                         systemImage: "magnifyingglass",
-                        description: Text("Try searching with a different city or country.")
+                        description: Text(L10n.tr("Try searching with a different city or country."))
                     )
                     .listRowBackground(Color.clear)
                 } else {
-                    Section("Destinations") {
+                    Section(L10n.tr("Destinations")) {
                         ForEach(filteredLocationOptions) { option in
                             destinationSheetRow(option)
                         }
@@ -237,12 +237,12 @@ struct FeedbackFormView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Select destination")
+            .navigationTitle(L10n.tr("Select destination"))
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $destinationSearchText, prompt: "Search city, country, or period")
+            .searchable(text: $destinationSearchText, prompt: L10n.tr("Search city, country, or period"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close") {
+                    Button(L10n.tr("Close")) {
                         isDestinationPickerPresented = false
                     }
                 }
@@ -285,8 +285,8 @@ struct FeedbackFormView: View {
         }
         .foregroundStyle(.primary)
         .accessibilityLabel("\(option.destinationName), \(option.country)")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Select this destination for feedback")
+        .accessibilityValue(isSelected ? L10n.tr("Selected") : L10n.tr("Not selected"))
+        .accessibilityHint(L10n.tr("Select this destination for feedback"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .overlay(alignment: .topTrailing) {
             Text(option.perspectiveLabel)
@@ -306,7 +306,7 @@ struct FeedbackFormView: View {
 
     private var ratingCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "Rating", subtitle: ratingLabel)
+            sectionHeader(title: L10n.tr("Rating"), subtitle: ratingLabel)
 
             HStack(spacing: 12) {
                 ForEach(1...5, id: \.self) { star in
@@ -322,9 +322,10 @@ struct FeedbackFormView: View {
                             .scaleEffect(star == viewModel.feedbackDraft.rating ? 1.05 : 1)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(star) star\(star == 1 ? "" : "s")")
-                    .accessibilityValue(isActive ? "Selected" : "Not selected")
-                    .accessibilityHint("Sets overall trip rating")
+                    .accessibilityTapTarget()
+                    .accessibilityLabel(star == 1 ? L10n.f("%d star", star) : L10n.f("%d stars", star))
+                    .accessibilityValue(isActive ? L10n.tr("Selected") : L10n.tr("Not selected"))
+                    .accessibilityHint(L10n.tr("Sets overall trip rating"))
                     .accessibilityAddTraits(isActive ? .isSelected : [])
                 }
 
@@ -343,7 +344,7 @@ struct FeedbackFormView: View {
 
     private var highlightsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "Highlights", subtitle: "Quick tags and an optional note")
+            sectionHeader(title: L10n.tr("Highlights"), subtitle: L10n.tr("Quick tags and an optional note"))
 
             FlexibleTagLayout(tags: availableTags, selected: viewModel.feedbackDraft.tags) { tag in
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.84)) {
@@ -363,11 +364,11 @@ struct FeedbackFormView: View {
                     .padding(6)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .accessibilityLabel("Feedback notes")
-                    .accessibilityHint("Optional notes about your travel experience")
+                    .accessibilityLabel(L10n.tr("Feedback notes"))
+                    .accessibilityHint(L10n.tr("Optional notes about your travel experience"))
 
                 if trimmedNotes.isEmpty {
-                    Text("How was it? What would you recommend to other travelers?")
+                    Text(L10n.tr("How was it? What would you recommend to other travelers?"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 14)
@@ -377,7 +378,7 @@ struct FeedbackFormView: View {
             }
 
             Text("\(viewModel.feedbackDraft.text.count) characters")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -386,30 +387,30 @@ struct FeedbackFormView: View {
 
     private var metricsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Perception", subtitle: "Balance crowding, value, and sustainability")
+            sectionHeader(title: L10n.tr("Perception"), subtitle: L10n.tr("Balance crowding, value, and sustainability"))
 
             metricSlider(
-                title: "Crowding",
+                title: L10n.tr("Crowding"),
                 icon: "person.3.fill",
                 value: $viewModel.feedbackDraft.crowding,
-                lowCaption: "Quiet",
-                highCaption: "Very crowded"
+                lowCaption: L10n.tr("Quiet"),
+                highCaption: L10n.tr("Very crowded")
             )
 
             metricSlider(
-                title: "Value for money",
+                title: L10n.tr("Value for money"),
                 icon: "banknote.fill",
                 value: $viewModel.feedbackDraft.value,
-                lowCaption: "Low",
-                highCaption: "Excellent"
+                lowCaption: L10n.tr("Low"),
+                highCaption: L10n.tr("Excellent")
             )
 
             metricSlider(
-                title: "Sustainability",
+                title: L10n.tr("Sustainability"),
                 icon: "leaf.fill",
                 value: $viewModel.feedbackDraft.sustainabilityPerception,
-                lowCaption: "Low",
-                highCaption: "High"
+                lowCaption: L10n.tr("Low"),
+                highCaption: L10n.tr("High")
             )
         }
         .appleCardSurface()
@@ -427,12 +428,12 @@ struct FeedbackFormView: View {
 
     private var ratingLabel: String {
         switch viewModel.feedbackDraft.rating {
-        case 1: return "Needs improvement"
-        case 2: return "Below expectations"
-        case 3: return "Good"
-        case 4: return "Very good"
-        case 5: return "Excellent"
-        default: return "Tap a star"
+        case 1: return L10n.tr("Needs improvement")
+        case 2: return L10n.tr("Below expectations")
+        case 3: return L10n.tr("Good")
+        case 4: return L10n.tr("Very good")
+        case 5: return L10n.tr("Excellent")
+        default: return L10n.tr("Tap a star")
         }
     }
 
@@ -468,13 +469,13 @@ struct FeedbackFormView: View {
             Slider(value: value, in: 0...1)
                 .tint(Color.accentColor)
                 .accessibilityLabel(title)
-                .accessibilityValue("\(score) out of 100")
-                .accessibilityHint("\(lowCaption) to \(highCaption)")
+                .accessibilityValue(L10n.f("%d out of 100", score))
+                .accessibilityHint(L10n.f("%@ to %@", lowCaption, highCaption))
 
             HStack {
                 Text(lowCaption)
                 Spacer()
-                Text(value.wrappedValue < 0.34 ? lowCaption : value.wrappedValue > 0.66 ? highCaption : "Balanced")
+                Text(value.wrappedValue < 0.34 ? lowCaption : value.wrappedValue > 0.66 ? highCaption : L10n.tr("Balanced"))
                     .fontWeight(.semibold)
                 Spacer()
                 Text(highCaption)
@@ -494,7 +495,7 @@ struct FeedbackFormView: View {
         viewModel.feedbackError = nil
 
         guard let selectedLocation else {
-            viewModel.feedbackError = "Choose a visited destination first."
+            viewModel.feedbackError = L10n.tr("Choose a visited destination first.")
             withAnimation(.spring(response: 0.25, dampingFraction: 0.78)) {
                 highlightDestinationValidation = true
             }
@@ -516,7 +517,7 @@ private struct FlexibleTagLayout: View {
                 Button {
                     onTap(tag)
                 } label: {
-                    Text(tag)
+                        Text(L10n.tr(tag))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(selected.contains(tag) ? Color.accentColor : .primary)
                         .frame(maxWidth: .infinity)
@@ -541,9 +542,10 @@ private struct FlexibleTagLayout: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(tag)
-                .accessibilityValue(selected.contains(tag) ? "Selected" : "Not selected")
-                .accessibilityHint("Double-tap to toggle this highlight tag")
+                .accessibilityTapTarget()
+                .accessibilityLabel(L10n.tr(tag))
+                .accessibilityValue(selected.contains(tag) ? L10n.tr("Selected") : L10n.tr("Not selected"))
+                .accessibilityHint(L10n.tr("Double-tap to toggle this highlight tag"))
                 .accessibilityAddTraits(selected.contains(tag) ? .isSelected : [])
             }
         }
@@ -623,7 +625,7 @@ private extension View {
                 destinationLatitude: destination.latitude,
                 destinationLongitude: destination.longitude,
                 sourceType: .traveler,
-                authorHomeCity: "Rome",
+                authorHomeCity: "Milan",
                 authorHomeCountry: "Italy",
                 periodLabel: "1 Jun - 6 Jun"
             )

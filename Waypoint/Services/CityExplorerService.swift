@@ -40,20 +40,20 @@ enum CityPlaceCategory: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .attractions: return "Attractions"
-        case .restaurants: return "Restaurants"
-        case .essentials: return "Essentials"
+        case .attractions: return L10n.tr("Attractions")
+        case .restaurants: return L10n.tr("Restaurants")
+        case .essentials: return L10n.tr("Essentials")
         }
     }
 
     func mapQuery(for city: ExplorerCity) -> String {
         switch self {
         case .attractions:
-            return "Top attractions in \(city.label)"
+            return L10n.f("Top attractions in %@", city.label)
         case .restaurants:
-            return "Best restaurants in \(city.label)"
+            return L10n.f("Best restaurants in %@", city.label)
         case .essentials:
-            return "Transport hubs and useful places in \(city.label)"
+            return L10n.f("Transport hubs and useful places in %@", city.label)
         }
     }
 
@@ -198,33 +198,58 @@ struct CityExplorerService {
 
     func fetchWikipediaInfo(for city: ExplorerCity) async -> CityWikiInfo? {
         let candidates = wikiTitleCandidates(for: city)
+        let languages = Array(NSOrderedSet(array: [L10n.preferredLanguageCode, "en"]).compactMap { $0 as? String })
+        var bestInfo: CityWikiInfo?
 
-        for candidate in candidates {
-            guard let encoded = candidate.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { continue }
-            guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(encoded)") else { continue }
+        for languageCode in languages {
+            for candidate in candidates {
+                guard let encoded = candidate.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { continue }
+                guard let url = URL(string: "https://\(languageCode).wikipedia.org/api/rest_v1/page/summary/\(encoded)") else { continue }
 
-            do {
-                var request = URLRequest(url: url)
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                let (data, response) = try await session.data(for: request)
-                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { continue }
+                do {
+                    var request = URLRequest(url: url)
+                    request.setValue("application/json", forHTTPHeaderField: "Accept")
+                    let (data, response) = try await session.data(for: request)
+                    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { continue }
 
-                let decoded = try JSONDecoder().decode(WikipediaSummaryResponse.self, from: data)
-                guard !decoded.extract.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                    let decoded = try JSONDecoder().decode(WikipediaSummaryResponse.self, from: data)
+                    guard !decoded.extract.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                    let preferredImageURL = decoded.thumbnail?.source
+                        .flatMap(URL.init(string:))
+                        .flatMap { isLikelyCityHeroImage($0) ? $0 : nil }
 
-                return CityWikiInfo(
-                    title: decoded.title,
-                    subtitle: decoded.description ?? city.label,
-                    summary: decoded.extract,
-                    articleURL: decoded.contentURLs?.desktop?.page.flatMap(URL.init(string:)),
-                    imageURL: decoded.thumbnail?.source.flatMap(URL.init(string:))
-                )
-            } catch {
-                continue
+                    let info = CityWikiInfo(
+                        title: decoded.title,
+                        subtitle: decoded.description ?? city.label,
+                        summary: decoded.extract,
+                        articleURL: decoded.contentURLs?.desktop?.page.flatMap(URL.init(string:)),
+                        imageURL: preferredImageURL
+                    )
+
+                    if let current = bestInfo {
+                        let mergedArticleURL = current.articleURL ?? info.articleURL
+                        let mergedImageURL = current.imageURL ?? info.imageURL
+                        bestInfo = CityWikiInfo(
+                            title: current.title,
+                            subtitle: current.subtitle,
+                            summary: current.summary,
+                            articleURL: mergedArticleURL,
+                            imageURL: mergedImageURL
+                        )
+                    } else {
+                        bestInfo = info
+                    }
+
+                    if bestInfo?.imageURL != nil {
+                        return bestInfo
+                    }
+                } catch {
+                    continue
+                }
             }
         }
 
-        return nil
+        return bestInfo
     }
 
     func fetchPlaces(for city: ExplorerCity, category: CityPlaceCategory) async -> [CityPlace] {
@@ -274,7 +299,7 @@ struct CityExplorerService {
         let payload = GoogleTextSearchRequest(
             textQuery: query,
             maxResultCount: 5,
-            languageCode: "en",
+            languageCode: L10n.preferredLanguageCode,
             locationBias: nil,
             includedType: "locality",
             strictTypeFiltering: true
@@ -326,7 +351,7 @@ struct CityExplorerService {
         let payload = GoogleTextSearchRequest(
             textQuery: category.mapQuery(for: city),
             maxResultCount: 10,
-            languageCode: "en",
+            languageCode: L10n.preferredLanguageCode,
             locationBias: GoogleLocationBias(
                 circle: GoogleCircle(
                     center: GoogleLatLng(latitude: city.latitude, longitude: city.longitude),
@@ -384,7 +409,7 @@ struct CityExplorerService {
 
         let subtitle = place.formattedAddress?.trimmedNonEmpty
             ?? place.types?.first?.replacingOccurrences(of: "_", with: " ").capitalized
-            ?? "Local place"
+            ?? L10n.tr("Local place")
 
         let point = CLLocation(latitude: location.latitude, longitude: location.longitude)
         let distance = point.distance(from: center)
@@ -504,9 +529,9 @@ struct CityExplorerService {
                     ? "\(Int(distance.rounded())) m"
                     : String(format: "%.1f km", distance / 1000)
 
-                let subtitle = feature.properties.formatted
-                    ?? feature.properties.categories?.first?.replacingOccurrences(of: ".", with: " ").capitalized
-                    ?? "Local place"
+        let subtitle = feature.properties.formatted
+            ?? feature.properties.categories?.first?.replacingOccurrences(of: ".", with: " ").capitalized
+            ?? L10n.tr("Local place")
 
                 return CityPlace(
                     id: "\(name.lowercased())|\(lat)|\(lon)|geoapify",
@@ -562,7 +587,7 @@ struct CityExplorerService {
             CityPlace(
                 id: "\(category.rawValue)-fallback-1-\(city.id)",
                 name: "Top \(category.title)",
-                subtitle: "Open map search for live results in \(city.name).",
+                subtitle: L10n.f("Open map search for live results in %@.", city.name),
                 distanceLabel: nil,
                 deeplink: deeplink,
                 provider: config.hasGooglePlaces ? "Google Places" : "Apple Maps",
@@ -631,9 +656,9 @@ struct CityExplorerService {
         if #available(iOS 26.0, *) {
             return mapItem.address?.shortAddress
                 ?? mapItem.addressRepresentations?.fullAddress(includingRegion: false, singleLine: true)
-                ?? "No additional details"
+                ?? L10n.tr("No additional details")
         } else {
-            return mapItem.placemark.title ?? mapItem.placemark.locality ?? "No additional details"
+            return mapItem.placemark.title ?? mapItem.placemark.locality ?? L10n.tr("No additional details")
         }
     }
 
@@ -691,6 +716,30 @@ struct CityExplorerService {
             candidates.append("\(city.name), \(region)")
         }
         return Array(NSOrderedSet(array: candidates)) as? [String] ?? candidates
+    }
+
+    private func isLikelyCityHeroImage(_ url: URL) -> Bool {
+        let normalized = url.absoluteString
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .lowercased()
+
+        let blockedTokens = [
+            "flag",
+            "bandiera",
+            "bandeira",
+            "bayrak",
+            "drapeau",
+            "fahne",
+            "coat_of_arms",
+            "stemma",
+            "escudo",
+            "arma",
+            "armoiries",
+            "emblem",
+            "seal"
+        ]
+
+        return !blockedTokens.contains { normalized.contains($0) }
     }
 
     private func nearestLocalCity(

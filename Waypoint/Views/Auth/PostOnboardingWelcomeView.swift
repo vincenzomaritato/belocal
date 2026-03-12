@@ -17,10 +17,8 @@ struct PostOnboardingWelcomeView: View {
 
     var body: some View {
         ZStack {
-            AuthBackgroundView()
-
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 18) {
                     heroCard
                         .offset(y: isRevealed ? 0 : 22)
                         .opacity(isRevealed ? 1 : 0)
@@ -33,37 +31,68 @@ struct PostOnboardingWelcomeView: View {
                         .offset(y: isRevealed ? 0 : 38)
                         .opacity(isRevealed ? 1 : 0)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
-                .padding(.bottom, 120)
+                .frame(maxWidth: 720)
+                .padding(.horizontal, 20)
+                .padding(.top, 22)
+                .padding(.bottom, 132)
+                .frame(maxWidth: .infinity)
                 .animation(.spring(response: 0.45, dampingFraction: 0.9).delay(0.05), value: isRevealed)
             }
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 Divider()
 
-                Button {
-                    guard !isContinuing else { return }
-                    isContinuing = true
-                    bootstrap.settingsStore.markOnboardingWelcomeSeen()
-                    onContinue()
-                } label: {
-                    HStack(spacing: 8) {
-                        if isContinuing {
-                            ProgressView()
-                                .tint(.white)
-                        }
-                        Text("Enter Waypoint")
-                            .font(.headline.weight(.semibold))
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(L10n.tr("Profile ready"))
+                            .font(.subheadline.weight(.semibold))
+                        Text(L10n.tr("Open the app with your preferences already applied."))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        guard !isContinuing else { return }
+                        isContinuing = true
+                        bootstrap.settingsStore.markOnboardingWelcomeSeen()
+                        onContinue()
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isContinuing {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+
+                            Text(L10n.tr("Enter BeLocal"))
+                                .font(.headline.weight(.semibold))
+
+                            if !isContinuing {
+                                Image(systemName: "arrow.right")
+                                    .font(.caption.weight(.bold))
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 13)
+                        .foregroundStyle(.white)
+                        .background(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.23, green: 0.47, blue: 0.97),
+                                    Color(red: 0.13, green: 0.34, blue: 0.84)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isContinuing)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-                .disabled(isContinuing)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 18)
                 .padding(.bottom, 12)
             }
             .background(.ultraThinMaterial)
@@ -76,63 +105,83 @@ struct PostOnboardingWelcomeView: View {
     }
 
     private var heroCard: some View {
-        GlassCard(cornerRadius: 30) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.orange.opacity(0.9), Color.red.opacity(0.8)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.23, green: 0.47, blue: 0.97),
+                                    Color(red: 0.36, green: 0.74, blue: 1.0)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .accessibilityHidden(true)
-                    }
-                    .frame(width: 48, height: 48)
+                        )
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Welcome back")
-                            .font(.title3.weight(.bold))
-                        Text("Profile completed successfully")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Image(systemName: "checkmark")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                        .accessibilityHidden(true)
                 }
+                .frame(width: 56, height: 56)
 
-                Text("Hi \(resolvedName), here's how Waypoint will personalize suggestions, itineraries, and ranking.")
-                    .font(.subheadline)
-                    .foregroundStyle(.primary.opacity(0.88))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(L10n.tr("Welcome to BeLocal"))
+                        .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    Text(L10n.tr("Setup complete"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.f("Hi %@, your profile is ready to drive recommendations, ranking, and planner suggestions from the first screen.", resolvedName))
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.primary)
+
+                HStack(spacing: 10) {
+                    welcomePill(title: homeLabel, icon: "location.fill")
+                    welcomePill(title: budgetLabel, icon: "creditcard.fill")
+                }
             }
         }
+        .padding(26)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color.white.opacity(0.64))
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.76), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 18, x: 0, y: 12)
     }
 
     private var summaryCard: some View {
-        GlassCard(cornerRadius: 26) {
+        WelcomeSurface {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Profile snapshot")
+                Text(L10n.tr("Profile snapshot"))
                     .font(.headline)
 
                 VStack(spacing: 10) {
-                    snapshotRow(label: "Travelers", value: "\(profile?.peopleDefault ?? 2)")
-                    snapshotRow(label: "Budget", value: budgetLabel)
-                    snapshotRow(label: "Departure", value: homeLabel)
-                    snapshotRow(label: "Eco", value: ecoLabel)
+                    snapshotRow(label: L10n.tr("Travelers"), value: "\(profile?.peopleDefault ?? 2)")
+                    snapshotRow(label: L10n.tr("Budget"), value: budgetLabel)
+                    snapshotRow(label: L10n.tr("Departure"), value: homeLabel)
+                    snapshotRow(label: L10n.tr("Eco"), value: ecoLabel)
                 }
 
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Preferred seasons")
+                    Text(L10n.tr("Preferred seasons"))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
 
                     if resolvedSeasons.isEmpty {
-                        Text("No preference set")
+                        Text(L10n.tr("No preference set"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
@@ -156,9 +205,9 @@ struct PostOnboardingWelcomeView: View {
     }
 
     private var styleCard: some View {
-        GlassCard(cornerRadius: 26) {
+        WelcomeSurface {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Editorial focus")
+                Text(L10n.tr("Editorial focus"))
                     .font(.headline)
 
                 ForEach(styleBreakdown, id: \.key) { item in
@@ -176,9 +225,9 @@ struct PostOnboardingWelcomeView: View {
                             let width = max(proxy.size.width * item.value, 8)
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.black.opacity(0.07))
+                                    .fill(Color.black.opacity(0.06))
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.orange.opacity(0.65))
+                                    .fill(Color(red: 0.23, green: 0.47, blue: 0.97).opacity(0.72))
                                     .frame(width: width)
                             }
                         }
@@ -204,32 +253,28 @@ struct PostOnboardingWelcomeView: View {
 
     private var resolvedName: String {
         let value = profile?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return value.isEmpty ? "Traveler" : value
+        return value.isEmpty ? L10n.tr("Traveler") : value
     }
 
     private var resolvedSeasons: [String] {
         (profile?.preferredSeasons ?? [])
             .filter { !$0.isEmpty }
+            .map(L10n.season)
             .sorted()
     }
 
     private var budgetLabel: String {
-        guard let profile else { return "EUR 1200 - EUR 3200" }
-        return "EUR \(Int(profile.budgetMin)) - EUR \(Int(profile.budgetMax))"
+        guard let profile else { return L10n.tr("EUR 1200 - EUR 3200") }
+        return L10n.f("EUR %d - EUR %d", Int(profile.budgetMin), Int(profile.budgetMax))
     }
 
     private var homeLabel: String {
-        guard let profile else { return "Rome, Italy" }
-
-        let isRome =
-            abs(profile.homeLatitude - TravelDistanceCalculator.defaultHomeLatitude) < 0.0001 &&
-            abs(profile.homeLongitude - TravelDistanceCalculator.defaultHomeLongitude) < 0.0001
-
-        if isRome {
-            return "Rome, Italy"
-        }
-
-        return String(format: "%.2f, %.2f", profile.homeLatitude, profile.homeLongitude)
+        guard let profile else { return L10n.tr("Not set") }
+        let textual = [profile.homeCity, profile.homeCountry]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        return textual.isEmpty ? L10n.tr("Not set") : textual
     }
 
     private var ecoLabel: String {
@@ -239,7 +284,7 @@ struct PostOnboardingWelcomeView: View {
 
     private var styleBreakdown: [(key: String, value: Double)] {
         guard let profile else {
-            return [("Culture", 0.25), ("Food", 0.25), ("Nature", 0.25), ("Beach", 0.25)]
+            return [(L10n.style("Culture"), 0.25), (L10n.style("Food"), 0.25), (L10n.style("Nature"), 0.25), (L10n.style("Beach"), 0.25)]
         }
 
         let orderedKeys = ["Culture", "Food", "Nature", "Beach"]
@@ -248,8 +293,40 @@ struct PostOnboardingWelcomeView: View {
 
         return orderedKeys.map { key in
             let raw = weights[key] ?? 0
-            return (key, raw / sum)
+            return (L10n.style(key), raw / sum)
         }
+    }
+
+    private func welcomePill(title: String, icon: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+            Text(title)
+                .font(.caption.weight(.semibold))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.04), in: Capsule(style: .continuous))
+        .foregroundStyle(.secondary)
+    }
+}
+
+private struct WelcomeSurface<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .padding(22)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.white.opacity(0.62))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.74), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 16, x: 0, y: 10)
     }
 }
 

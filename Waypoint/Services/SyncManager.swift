@@ -55,13 +55,15 @@ final class SyncManager {
         }
 
         let accessToken: String
+        let authenticatedUserID = settingsStore.authenticatedUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !authenticatedUserID.isEmpty else {
+            logger.error("Missing authenticated user id for Supabase sync.")
+            return
+        }
         do {
             accessToken = try await supabaseAuthService.ensureValidAccessToken(settingsStore: settingsStore)
         } catch {
             logger.error("Failed to ensure Supabase access token: \(error.localizedDescription, privacy: .public)")
-            if shouldForceSignOut(for: error) {
-                settingsStore.signOut()
-            }
             return
         }
 
@@ -77,7 +79,16 @@ final class SyncManager {
         let operations = fetched.filter {
             ($0.status == .pending || $0.status == .failed) && $0.retryCount < maxRetryCount
         }
+        .sorted { lhs, rhs in
+            let lhsPriority = operationPriority(lhs.type)
+            let rhsPriority = operationPriority(rhs.type)
+            if lhsPriority == rhsPriority {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhsPriority < rhsPriority
+        }
         let processedAnyOperation = !operations.isEmpty
+        var syncedOperations: [SyncOperation] = []
 
         for operation in operations {
             if operation.status == .failed, operation.retryCount > 0 {
@@ -92,15 +103,17 @@ final class SyncManager {
             }
 
             do {
-                try await supabaseSyncService.push(operation: operation, accessToken: accessToken)
+                try await supabaseSyncService.push(
+                    operation: operation,
+                    accessToken: accessToken,
+                    authenticatedUserID: authenticatedUserID
+                )
                 operation.status = .synced
                 operation.lastError = nil
+                syncedOperations.append(operation)
             } catch {
                 operation.status = .failed
                 operation.lastError = error.localizedDescription
-                if shouldForceSignOut(for: error) {
-                    settingsStore.signOut()
-                }
                 switch retryDecision(for: error, currentRetryCount: operation.retryCount) {
                 case .retry:
                     operation.retryCount += 1
@@ -113,13 +126,21 @@ final class SyncManager {
         }
 
         let shouldDownsyncAfterPush = processedAnyOperation
-        guard shouldDownsyncAfterPush || forceDownsync || shouldRunDownsync() else {
-            return
-        }
+        let shouldRunDownsyncNow = shouldDownsyncAfterPush || forceDownsync || shouldRunDownsync()
+        guard shouldRunDownsyncNow else { return }
 
         do {
-            try await synchronizeFromSupabase(context: context, accessToken: accessToken)
+            try await synchronizeFromSupabase(
+                context: context,
+                accessToken: accessToken,
+                authenticatedUserID: authenticatedUserID
+            )
             lastDownsyncAt = .now
+
+            if !syncedOperations.isEmpty {
+                syncedOperations.forEach(context.delete)
+                _ = persist(context: context, stage: "cleanup_synced_operations")
+            }
         } catch {
             logger.error("Supabase downsync failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -129,8 +150,15 @@ final class SyncManager {
         Date().timeIntervalSince(lastDownsyncAt) >= downsyncIntervalSeconds
     }
 
-    private func synchronizeFromSupabase(context: ModelContext, accessToken: String) async throws {
-        let snapshot = try await supabaseSyncService.fetchSnapshot(accessToken: accessToken)
+    private func synchronizeFromSupabase(
+        context: ModelContext,
+        accessToken: String,
+        authenticatedUserID: String
+    ) async throws {
+        let snapshot = try await supabaseSyncService.fetchSnapshot(
+            accessToken: accessToken,
+            authenticatedUserID: authenticatedUserID
+        )
         let protectedIDs = try protectedEntityIDs(context: context)
 
         let destinationDescriptor = FetchDescriptor<Destination>()
@@ -245,6 +273,12 @@ final class SyncManager {
         let descriptor = FetchDescriptor<UserProfile>()
         let localProfiles = try context.fetch(descriptor)
         var localByID = Dictionary(uniqueKeysWithValues: localProfiles.map { ($0.id, $0) })
+        var localByAuthUserID = Dictionary(
+            uniqueKeysWithValues: localProfiles.compactMap { profile in
+                let authUserID = profile.authUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+                return authUserID.isEmpty ? nil : (authUserID, profile)
+            }
+        )
 
         var changed = false
 
@@ -252,6 +286,7 @@ final class SyncManager {
             guard let profileID = parseUUID(row["profileId"]) else {
                 continue
             }
+            let authUserID = row["authUserId"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
             let preferredSeasons = parseList(row["preferredSeasons"])
             let styleWeights = CodableStorage.decode(
@@ -260,7 +295,8 @@ final class SyncManager {
                 fallback: [:]
             )
 
-            if let profile = localByID[profileID] {
+            if let profile = localByID[profileID] ?? (!authUserID.isEmpty ? localByAuthUserID[authUserID] : nil) {
+                profile.authUserId = authUserID
                 profile.name = row["name"] ?? profile.name
                 profile.budgetMin = parseDouble(row["budgetMin"], default: profile.budgetMin)
                 profile.budgetMax = parseDouble(row["budgetMax"], default: profile.budgetMax)
@@ -280,9 +316,10 @@ final class SyncManager {
             } else {
                 let profile = UserProfile(
                     id: profileID,
+                    authUserId: authUserID,
                     name: row["name"] ?? "Traveler",
-                    homeCity: row["homeCity"] ?? "Rome",
-                    homeCountry: row["homeCountry"] ?? "Italy",
+                    homeCity: row["homeCity"] ?? "",
+                    homeCountry: row["homeCountry"] ?? "",
                     budgetMin: parseDouble(row["budgetMin"], default: 1000),
                     budgetMax: parseDouble(row["budgetMax"], default: 3000),
                     preferredSeasons: preferredSeasons.isEmpty ? ["Spring", "Autumn"] : preferredSeasons,
@@ -294,6 +331,9 @@ final class SyncManager {
                 )
                 context.insert(profile)
                 localByID[profileID] = profile
+                if !authUserID.isEmpty {
+                    localByAuthUserID[authUserID] = profile
+                }
                 changed = true
             }
         }
@@ -340,6 +380,7 @@ final class SyncManager {
             let startDate = parseDate(row["startDate"]) ?? .now
             let endDate = parseDate(row["endDate"]) ?? startDate
             let transport = TransportType(rawValue: row["transportType"] ?? "") ?? .plane
+            let tripIntent = TripIntent(rawValue: row["intent"] ?? "") ?? TripIntent.inferred(startDate: startDate, endDate: endDate)
             let people = parseInt(row["people"], default: 1)
             let budgetSpent = parseDouble(row["budgetSpent"], default: 0)
             let co2Estimated = parseDouble(row["co2Estimated"], default: 0)
@@ -351,6 +392,7 @@ final class SyncManager {
                 trip.startDate = startDate
                 trip.endDate = max(endDate, startDate)
                 trip.transportType = transport
+                trip.tripIntent = tripIntent
                 trip.people = max(1, people)
                 trip.budgetSpent = max(0, budgetSpent)
                 trip.co2Estimated = max(0, co2Estimated)
@@ -364,6 +406,7 @@ final class SyncManager {
                     startDate: startDate,
                     endDate: max(endDate, startDate),
                     transportType: transport,
+                    tripIntent: tripIntent,
                     people: max(1, people),
                     budgetSpent: max(0, budgetSpent),
                     co2Estimated: max(0, co2Estimated),
@@ -513,7 +556,7 @@ final class SyncManager {
 
         let created = Destination(
             id: destinationID,
-            name: row["destinationName"] ?? "Unknown destination",
+            name: row["destinationName"] ?? L10n.tr("Unknown destination"),
             country: row["destinationCountry"] ?? "Unknown",
             latitude: parseDouble(row["destinationLatitude"], default: 0),
             longitude: parseDouble(row["destinationLongitude"], default: 0),
@@ -638,18 +681,12 @@ final class SyncManager {
         }
     }
 
-    private func shouldForceSignOut(for error: Error) -> Bool {
-        guard let supabaseError = error as? SupabaseServiceError else {
-            return false
-        }
-
-        switch supabaseError {
-        case .notAuthenticated:
-            return true
-        case .requestFailed(let statusCode, _):
-            return statusCode == 401
-        case .notConfigured, .unsupportedPayload, .invalidURL, .invalidResponse, .emailConfirmationRequired:
-            return false
+    private func operationPriority(_ type: SyncOperationType) -> Int {
+        switch type {
+        case .upsertProfile:
+            return 0
+        case .createTrip, .createFeedback, .updateFeedback, .saveActivities, .deleteTrip, .deleteFeedback, .deleteActivity:
+            return 1
         }
     }
 

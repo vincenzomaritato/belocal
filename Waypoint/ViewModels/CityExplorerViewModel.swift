@@ -26,6 +26,24 @@ final class CityExplorerViewModel {
         statusMessage = nil
     }
 
+    func resetState() {
+        searchText = ""
+        selectedCity = nil
+        wikiInfo = nil
+        attractions = []
+        restaurants = []
+        essentials = []
+        feedbackEntries = []
+        matchedDestination = nil
+        matchedLocalInsight = nil
+        personalizedBrief = nil
+        isLoadingInfo = false
+        isLoadingPlaces = false
+        isResolvingLocation = false
+        isGeneratingBrief = false
+        statusMessage = nil
+    }
+
     func refreshLocalMatches(homeViewModel: HomeViewModel) {
         guard let selectedCity else { return }
         feedbackEntries = feedbackForCity(selectedCity, homeViewModel: homeViewModel)
@@ -108,7 +126,7 @@ final class CityExplorerViewModel {
         isGeneratingBrief = false
 
         if info == nil && activityItems.isEmpty && restaurantItems.isEmpty && essentialItems.isEmpty {
-            statusMessage = "No online details found for this city yet. Try another city."
+            statusMessage = L10n.tr("No online details found for this city yet. Try another city.")
         }
     }
 
@@ -163,7 +181,7 @@ final class CityExplorerViewModel {
         if let rating = place.rating {
             let ratingContribution = min(max(rating / 5, 0), 1) * 45
             score += ratingContribution
-            reasonParts.append("Rating \(String(format: "%.1f", rating))/5")
+            reasonParts.append(L10n.f("Rating %@/5", String(format: "%.1f", rating)))
         } else {
             score += 14
         }
@@ -171,7 +189,7 @@ final class CityExplorerViewModel {
         if let reviews = place.reviewCount {
             let confidence = min(log10(Double(max(reviews, 1))) / 4.0, 1.0) * 20
             score += confidence
-            reasonParts.append("\(reviews) reviews")
+            reasonParts.append(L10n.f("%lld reviews", reviews))
         } else {
             score += 8
         }
@@ -180,7 +198,7 @@ final class CityExplorerViewModel {
             let budgetFit = budgetFitScore(priceLevel: level, profile: profile)
             score += budgetFit
             if budgetFit > 10 {
-                reasonParts.append("Fits your budget")
+                reasonParts.append(L10n.tr("Fits your budget"))
             }
         } else {
             score += 6
@@ -188,14 +206,14 @@ final class CityExplorerViewModel {
 
         if place.openNow == true {
             score += 8
-            reasonParts.append("Open now")
+            reasonParts.append(L10n.tr("Open now"))
         }
 
         score += styleWeightBoost(category: category, profile: userProfile)
         score += feedbackAlignmentBoost(feedbackStats: feedbackStats, category: category)
 
         let reason = reasonParts.prefix(2).joined(separator: " · ")
-        return (score, reason.isEmpty ? "Good fit for your profile" : reason)
+        return (score, reason.isEmpty ? L10n.tr("Good fit for your profile") : reason)
     }
 
     private func styleWeightBoost(category: CityPlaceCategory, profile: UserProfile?) -> Double {
@@ -371,7 +389,7 @@ final class CityExplorerViewModel {
     }
 
     private static let countryCodeByNormalizedName: [String: String] = {
-        let englishLocale = Locale(identifier: "e")
+        let englishLocale = Locale(identifier: "en_US_POSIX")
         var result: [String: String] = [:]
 
         for code in Locale.Region.isoRegions.map(\.identifier) {

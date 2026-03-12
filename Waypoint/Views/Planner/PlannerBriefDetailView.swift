@@ -22,17 +22,17 @@ struct PlannerBriefDetailView: View {
     private var finalReport: PlannerFinalReport? { snapshot?.finalReport }
     private var answers: [String: String] { snapshot?.answers ?? [:] }
     private var destinationName: String {
-        let base = answers["destination"] ?? finalReport?.destinationFocus ?? conversation.destinationHint ?? "Your destination"
+        let base = answers["destination"] ?? finalReport?.destinationFocus ?? conversation.destinationHint ?? L10n.tr("Your destination")
         return base.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     private var freeDaysLabel: String { answers["freeDays"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "" }
     private var datesLabel: String {
         let raw = answers["seasonAndDates"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return raw.isEmpty ? (finalReport?.bestTravelWindow ?? "Flexible dates") : raw
+        return raw.isEmpty ? (finalReport?.bestTravelWindow ?? L10n.tr("Flexible dates")) : raw
     }
     private var budgetLabel: String {
         let raw = finalReport?.budgetSnapshot.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return raw.isEmpty ? "Budget not specified" : raw
+        return raw.isEmpty ? L10n.tr("Budget not specified") : raw
     }
     private var attractionCount: Int { finalReport?.attractions.count ?? 0 }
 
@@ -53,7 +53,7 @@ struct PlannerBriefDetailView: View {
         return [
             BriefHeroItem(
                 title: destinationName,
-                subtitle: "Final Trip Brief",
+                subtitle: L10n.tr("Final Trip Brief"),
                 gradient: heroGradient(at: 0)
             )
         ]
@@ -69,21 +69,21 @@ struct PlannerBriefDetailView: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         if !parsed.isEmpty { return Array(parsed.prefix(4)) }
-        return ["Architecture", "Nature", "Culture"]
+        return [L10n.tr("Architecture"), L10n.style("Nature"), L10n.style("Culture")]
     }
 
     private var titleText: String {
         if !freeDaysLabel.isEmpty {
-            return "Explore \(destinationName) in \(freeDaysLabel)"
+            return L10n.f("Explore %@ in %@", destinationName, freeDaysLabel)
         }
         if let report = finalReport, !report.headline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return report.headline
         }
-        return "Explore \(destinationName)"
+        return L10n.f("Explore %@", destinationName)
     }
 
     private var overviewText: String {
-        let base = finalReport?.overview ?? conversation.finalBriefOverview ?? "Your personalized travel brief is ready."
+        let base = finalReport?.overview ?? conversation.finalBriefOverview ?? L10n.tr("Your personalized travel brief is ready.")
         return base.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -122,7 +122,7 @@ struct PlannerBriefDetailView: View {
                 .padding(.bottom, 28)
             }
         }
-        .navigationTitle("Final Brief")
+        .navigationTitle(L10n.tr("Final Brief"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             preloadSnapshotIfNeeded()
@@ -130,7 +130,7 @@ struct PlannerBriefDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if onOpenLinkedChat != nil {
-                    Button("Open Chat") {
+                    Button(L10n.tr("Open Chat")) {
                         onOpenLinkedChat?()
                     }
                     .font(.subheadline.weight(.semibold))
@@ -149,8 +149,9 @@ struct PlannerBriefDetailView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Close final brief")
-                .accessibilityHint("Dismisses this screen")
+                .accessibilityTapTarget()
+                .accessibilityLabel(L10n.tr("Close final brief"))
+                .accessibilityHint(L10n.tr("Dismisses this screen"))
             }
         }
     }
@@ -239,7 +240,7 @@ struct PlannerBriefDetailView: View {
             HStack(spacing: 14) {
                 metaItem(icon: "tag", text: budgetLabel)
                 metaDivider
-                metaItem(icon: "map", text: attractionCount > 0 ? "\(attractionCount) places" : "Places soon")
+                metaItem(icon: "map", text: attractionCount > 0 ? L10n.f("%d places", attractionCount) : L10n.tr("Places soon"))
                 metaDivider
                 metaItem(icon: "calendar", text: datesLabel)
             }
@@ -269,10 +270,10 @@ struct PlannerBriefDetailView: View {
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.secondary)
                             Text(day.morning)
-                                .font(.caption)
+                                .font(.footnote)
                                 .lineLimit(2)
                             Text(day.evening)
-                                .font(.caption2)
+                                .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
                         }
@@ -314,11 +315,11 @@ struct PlannerBriefDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Label("Best window: \(report.bestTravelWindow)", systemImage: "calendar")
-                .font(.caption)
+            Label(L10n.f("Best window: %@", report.bestTravelWindow), systemImage: "calendar")
+                .font(.footnote)
                 .foregroundStyle(.secondary)
-            Label("Budget lens: \(report.budgetSnapshot)", systemImage: "tag.fill")
-                .font(.caption)
+            Label(L10n.f("Budget lens: %@", report.budgetSnapshot), systemImage: "tag.fill")
+                .font(.footnote)
                 .foregroundStyle(.secondary)
         }
         .padding(14)
@@ -340,7 +341,7 @@ struct PlannerBriefDetailView: View {
                         .lineLimit(2)
 
                     Text(liveInfo?.wikiSummary ?? liveInfo?.placeSummary ?? attraction.why)
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(4)
                 }
@@ -348,7 +349,7 @@ struct PlannerBriefDetailView: View {
 
             if let address = liveInfo?.address, !address.isEmpty {
                 Label(address, systemImage: "mappin.and.ellipse")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -380,14 +381,14 @@ struct PlannerBriefDetailView: View {
 
             if let phone = liveInfo?.phoneNumber, !phone.isEmpty {
                 Label(phone, systemImage: "phone.fill")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             if let nearby = liveInfo?.nearbySpots, !nearby.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Nearby")
-                        .font(.caption2.weight(.semibold))
+                    Text(L10n.tr("Nearby"))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
@@ -403,8 +404,8 @@ struct PlannerBriefDetailView: View {
                 HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Loading live details...")
-                        .font(.caption2)
+                    Text(L10n.tr("Loading live details..."))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -470,7 +471,7 @@ struct PlannerBriefDetailView: View {
 
     private func infoBadge(text: String, icon: String) -> some View {
         Label(text, systemImage: icon)
-            .font(.caption2.weight(.medium))
+            .font(.caption.weight(.medium))
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -484,8 +485,8 @@ struct PlannerBriefDetailView: View {
         Button {
             openURL(url)
         } label: {
-            Label(title, systemImage: icon)
-                .font(.caption2.weight(.semibold))
+            Label(L10n.tr(title), systemImage: icon)
+                .font(.caption.weight(.semibold))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
@@ -495,11 +496,12 @@ struct PlannerBriefDetailView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityTapTarget()
     }
 
     private func secondaryPill(text: String) -> some View {
         Text(text)
-            .font(.caption2.weight(.medium))
+            .font(.caption.weight(.medium))
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -515,11 +517,11 @@ struct PlannerBriefDetailView: View {
             ForEach(Array(report.checklist.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .top, spacing: 8) {
                     Text("\(index + 1)")
-                        .font(.caption2.weight(.bold))
+                        .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
                         .frame(width: 14, alignment: .leading)
                     Text(item)
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.primary)
                 }
             }
@@ -533,8 +535,8 @@ struct PlannerBriefDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionTitle("Notes")
             ForEach(report.notes, id: \.self) { note in
-                Text("• \(note)")
-                    .font(.caption)
+                    Text(L10n.f("• %@", note))
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
@@ -546,7 +548,7 @@ struct PlannerBriefDetailView: View {
     private var fallbackCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionTitle("Brief")
-            Text(conversation.finalBriefOverview ?? "Open the linked chat to regenerate or refresh your final brief.")
+            Text(conversation.finalBriefOverview ?? L10n.tr("Open the linked chat to regenerate or refresh your final brief."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -556,7 +558,7 @@ struct PlannerBriefDetailView: View {
     }
 
     private func sectionTitle(_ title: String) -> some View {
-        Text(title)
+        Text(L10n.tr(title))
             .font(.headline.weight(.semibold))
             .foregroundStyle(.primary)
     }
@@ -671,7 +673,7 @@ struct PlannerBriefDetailView: View {
 
     private func attractionOpenText(_ info: AttractionCardLiveInfo) -> String? {
         guard let openNow = info.openNow else { return nil }
-        return openNow ? "Open now" : "Closed now"
+        return openNow ? L10n.tr("Open now") : L10n.tr("Closed now")
     }
 
     private func attractionWeatherText(_ info: AttractionCardLiveInfo) -> String? {

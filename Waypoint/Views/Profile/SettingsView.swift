@@ -3,6 +3,7 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(AppBootstrap.self) private var bootstrap
 
@@ -10,11 +11,12 @@ struct SettingsView: View {
     @Bindable var settingsViewModel: SettingsViewModel
 
     @State private var showHomeCityPicker = false
+    @State private var showSignOutConfirmation = false
     @State private var autoSaveTask: Task<Void, Never>?
     @State private var liveRefreshTask: Task<Void, Never>?
     @State private var suppressAutoSave = true
 
-    private let seasons = ["Spring", "Summer", "Autumn", "Winter"]
+    private let seasons = SettingsViewModel.seasonOrder
 
     var body: some View {
         NavigationStack {
@@ -26,7 +28,7 @@ struct SettingsView: View {
                 travelProfileSection
                 seasonsSection
                 styleSection
-                dataSection
+                sessionSection
 
                 if let saveMessage = settingsViewModel.saveMessage {
                     Section {
@@ -37,12 +39,20 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.tr("Settings"))
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showHomeCityPicker) {
                 NavigationStack {
                     HomeLocationPickerView(settingsViewModel: settingsViewModel)
                 }
+            }
+            .alert(L10n.tr("Sign Out"), isPresented: $showSignOutConfirmation) {
+                Button(L10n.tr("Cancel"), role: .cancel) {}
+                Button(L10n.tr("Sign Out"), role: .destructive) {
+                    performSignOut()
+                }
+            } message: {
+                Text(L10n.tr("You will return to the login flow and need to sign in again to access your profile."))
             }
             .onAppear {
                 settingsViewModel.load(from: homeViewModel.userProfile)
@@ -102,36 +112,36 @@ struct SettingsView: View {
             HStack(spacing: 14) {
                 profileAvatar
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Profile")
+                    Text(L10n.tr("Profile"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    TextField("Traveler", text: $settingsViewModel.profileName)
+                    TextField(L10n.tr("Traveler"), text: $settingsViewModel.profileName)
                         .font(.title3.weight(.semibold))
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
+                        .accessibilityLabel(L10n.tr("Profile"))
                 }
             }
             .padding(.vertical, 4)
-            .accessibilityElement(children: .combine)
         }
     }
 
     private var profileCompletionSection: some View {
-        Section("Complete your profile") {
-            Text("Add your name and home city to improve recommendations and local/traveler feedback accuracy.")
+        Section(L10n.tr("Complete your profile")) {
+            Text(L10n.tr("Add your name and home city to improve recommendations and local/traveler feedback accuracy."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
             if settingsViewModel.homeLocationLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                settingsViewModel.homeLocationLabel == "Not set" {
-                Button("Choose Home City") {
+                settingsViewModel.homeLocationLabel == SettingsViewModel.unsetLabel {
+                Button(L10n.tr("Choose Home City")) {
                     showHomeCityPicker = true
                 }
             }
 
             if settingsViewModel.profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button("Use Traveler as name") {
-                    settingsViewModel.profileName = "Traveler"
+                Button(L10n.tr("Use Traveler as name")) {
+                    settingsViewModel.profileName = SettingsViewModel.defaultProfileName
                 }
             }
         }
@@ -151,13 +161,13 @@ struct SettingsView: View {
                 )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Home city")
+            .accessibilityLabel(L10n.tr("Home City"))
             .accessibilityValue(settingsViewModel.homeLocationLabel)
-            .accessibilityHint("Double-tap to change home location")
+            .accessibilityHint(L10n.tr("Double-tap to change home location"))
 
             HStack(spacing: 12) {
                 settingIcon(symbol: "creditcard.fill", color: .indigo)
-                Text("Budget")
+                Text(L10n.tr("Budget"))
                 Spacer()
                 Menu {
                     Picker("", selection: Binding(
@@ -178,14 +188,14 @@ struct SettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .accessibilityLabel("Budget preset")
+                .accessibilityLabel(L10n.tr("Budget preset"))
                 .accessibilityValue(settingsViewModel.selectedBudgetPreset.title)
-                .accessibilityHint("Double-tap to choose a budget profile")
+                .accessibilityHint(L10n.tr("Double-tap to choose a budget profile"))
             }
 
             HStack(spacing: 12) {
                 settingIcon(symbol: "leaf.fill", color: .green)
-                Text("Sustainability")
+                Text(L10n.tr("Sustainability"))
                 Spacer()
                 Menu {
                     Picker("", selection: Binding(
@@ -206,12 +216,12 @@ struct SettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .accessibilityLabel("Sustainability preset")
+                .accessibilityLabel(L10n.tr("Sustainability preset"))
                 .accessibilityValue(settingsViewModel.selectedEcoPreset.title)
-                .accessibilityHint("Double-tap to choose an environmental preference")
+                .accessibilityHint(L10n.tr("Double-tap to choose an environmental preference"))
             }
         } header: {
-            Text("Travel Profile")
+            Text(L10n.tr("Travel Profile"))
         } footer: {
             Text("\(settingsViewModel.selectedBudgetPreset.subtitle). \(budgetDetailText)\n\(sustainabilityDetailText)\n\(feedbackPerspectiveHint)")
         }
@@ -220,16 +230,16 @@ struct SettingsView: View {
     private var seasonsSection: some View {
         Section {
             ForEach(seasons, id: \.self) { season in
-                Toggle(season, isOn: seasonBinding(for: season))
+                Toggle(SettingsViewModel.seasonTitle(for: season), isOn: seasonBinding(for: season))
             }
         } header: {
-            Text("Preferred Seasons")
+            Text(L10n.tr("Preferred Seasons"))
         }
     }
 
     private var styleSection: some View {
         Section {
-            Text("Choose the personality of your suggestions.")
+            Text(L10n.tr("Choose the personality of your suggestions."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
@@ -271,26 +281,28 @@ struct SettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(preset.title) style")
-                    .accessibilityValue(settingsViewModel.selectedStylePreset == preset ? "Selected" : "Not selected")
+                    .accessibilityLabel(L10n.f("%@ style", preset.title))
+                    .accessibilityValue(settingsViewModel.selectedStylePreset == preset ? L10n.tr("Selected") : L10n.tr("Not selected"))
                     .accessibilityHint(styleDetail(for: preset))
                     .accessibilityAddTraits(settingsViewModel.selectedStylePreset == preset ? .isSelected : [])
                 }
             }
         } header: {
-            Text("Travel Style")
+            Text(L10n.tr("Travel Style"))
         } footer: {
-            Text("Current: \(settingsViewModel.selectedStylePreset.title). \(styleDetail(for: settingsViewModel.selectedStylePreset))")
+            Text(L10n.f("Current: %@. %@", settingsViewModel.selectedStylePreset.title, styleDetail(for: settingsViewModel.selectedStylePreset)))
         }
     }
 
-    private var dataSection: some View {
+    private var sessionSection: some View {
         Section {
-            Button("Reset local data", role: .destructive) {
-                settingsViewModel.resetLocalData(context: modelContext, bootstrap: bootstrap, homeViewModel: homeViewModel)
+            Button(L10n.tr("Sign Out"), role: .destructive) {
+                showSignOutConfirmation = true
             }
         } header: {
-            Text("Data")
+            Text(L10n.tr("Session"))
+        } footer: {
+            Text(L10n.tr("Sign out from this account on this device."))
         }
     }
 
@@ -365,6 +377,14 @@ struct SettingsView: View {
         }
     }
 
+    private func performSignOut() {
+        autoSaveTask?.cancel()
+        liveRefreshTask?.cancel()
+        suppressAutoSave = true
+        bootstrap.settingsStore.signOut()
+        dismiss()
+    }
+
     private func settingIcon(symbol: String, color: Color) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -385,7 +405,7 @@ struct SettingsView: View {
     ) -> some View {
         HStack(spacing: 12) {
             settingIcon(symbol: icon, color: iconColor)
-            Text(title)
+            Text(L10n.tr(title))
             Spacer(minLength: 8)
             Text(value)
                 .foregroundStyle(.secondary)
@@ -403,24 +423,24 @@ struct SettingsView: View {
     private var budgetDetailText: String {
         switch settingsViewModel.selectedBudgetPreset {
         case .essential:
-            return "Focused on value and lighter spending."
+            return L10n.tr("Focused on value and lighter spending.")
         case .comfort:
-            return "Balanced comfort for most trips."
+            return L10n.tr("Balanced comfort for most trips.")
         case .premium:
-            return "Higher quality stays and experiences."
+            return L10n.tr("Higher quality stays and experiences.")
         case .luxury:
-            return "Top-tier travel choices."
+            return L10n.tr("Top-tier travel choices.")
         }
     }
 
     private var sustainabilityDetailText: String {
         switch settingsViewModel.selectedEcoPreset {
         case .low:
-            return "Lower environmental constraints."
+            return L10n.tr("Lower environmental constraints.")
         case .balanced:
-            return "Balance between sustainability and flexibility."
+            return L10n.tr("Balance between sustainability and flexibility.")
         case .high:
-            return "Prioritizes low-impact options."
+            return L10n.tr("Prioritizes low-impact options.")
         }
     }
 
@@ -437,36 +457,36 @@ struct SettingsView: View {
     private func styleDetail(for preset: SettingsViewModel.StylePreset) -> String {
         switch preset {
         case .balanced:
-            return "A versatile mix across all categories."
+            return L10n.tr("A versatile mix across all categories.")
         case .culture:
-            return "Museums, heritage, art, and city identity."
+            return L10n.tr("Museums, heritage, art, and city identity.")
         case .food:
-            return "Restaurants, local flavors, and culinary spots."
+            return L10n.tr("Restaurants, local flavors, and culinary spots.")
         case .nature:
-            return "Parks, landscapes, and outdoor experiences."
+            return L10n.tr("Parks, landscapes, and outdoor experiences.")
         case .beach:
-            return "Coastal destinations and sea-focused trips."
+            return L10n.tr("Coastal destinations and sea-focused trips.")
         }
     }
 
     private var feedbackPerspectiveHint: String {
         let home = settingsViewModel.homeLocationLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !home.isEmpty else {
-            return "Your feedback is classified as Local around your home area and Traveler in other destinations."
+            return L10n.tr("Your feedback is classified as Local around your home area and Traveler in other destinations.")
         }
-        return "Your feedback role is Local in \(home) and Traveler in other destinations."
+        return L10n.f("Your feedback role is Local in %@ and Traveler in other destinations.", home)
     }
 
     private var isProfileIncomplete: Bool {
         let hasName = !settingsViewModel.profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let homeLabel = settingsViewModel.homeLocationLabel.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasHome = !homeLabel.isEmpty && homeLabel != "Not set"
+        let hasHome = !homeLabel.isEmpty && homeLabel != SettingsViewModel.unsetLabel
         return !hasName || !hasHome
     }
 
     private var isSaveMessageError: Bool {
-        guard let saveMessage = settingsViewModel.saveMessage else { return false }
-        return saveMessage.localizedCaseInsensitiveContains("could not")
+        guard settingsViewModel.saveMessage != nil else { return false }
+        return settingsViewModel.saveMessageIsError
     }
 }
 
@@ -494,21 +514,21 @@ private struct HomeLocationPickerView: View {
                     settingsViewModel.setHomeLocation(
                         latitude: TravelDistanceCalculator.defaultHomeLatitude,
                         longitude: TravelDistanceCalculator.defaultHomeLongitude,
-                        city: "Rome",
-                        country: "Italy",
-                        label: "Rome, Italy"
+                        city: "",
+                        country: "",
+                        label: L10n.tr("Not set")
                     )
                     dismiss()
                 } label: {
-                    Label("Reset to default (Rome, Italy)", systemImage: "arrow.uturn.backward")
+                    Label(L10n.tr("Clear home city"), systemImage: "arrow.uturn.backward")
                 }
             }
 
-            Section("Results") {
+            Section(L10n.tr("Results")) {
                 if isSearching {
                     HStack {
                         ProgressView()
-                        Text("Searching...")
+                        Text(L10n.tr("Searching..."))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -536,13 +556,13 @@ private struct HomeLocationPickerView: View {
                 }
 
                 if !isSearching && query.count >= 2 && results.isEmpty {
-                    ContentUnavailableView("No city found", systemImage: "magnifyingglass", description: Text("Try another name"))
+                    ContentUnavailableView(L10n.tr("No city found"), systemImage: "magnifyingglass", description: Text(L10n.tr("Try another name")))
                 }
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Home City")
-        .searchable(text: $query, prompt: "Search city")
+        .navigationTitle(L10n.tr("Home City"))
+        .searchable(text: $query, prompt: L10n.tr("Search city"))
         .onChange(of: query) { _, newValue in
             scheduleSearch(for: newValue)
         }

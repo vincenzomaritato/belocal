@@ -51,7 +51,7 @@ struct DestinationDetailView: View {
     private var mapSection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Destination focus")
+                Text(L10n.tr("Destination focus"))
                     .font(.headline)
 
                 Map(position: $mapPosition) {
@@ -60,8 +60,8 @@ struct DestinationDetailView: View {
                 }
                 .frame(height: 220)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .accessibilityLabel("Map of \(destination.name)")
-                .accessibilityHint("Shows the selected destination location")
+                .accessibilityLabel(L10n.f("Map of %@", destination.name))
+                .accessibilityHint(L10n.tr("Shows the selected destination location"))
             }
         }
     }
@@ -69,13 +69,13 @@ struct DestinationDetailView: View {
     private var keyAttributes: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Key attributes")
+                Text(L10n.tr("Key attributes"))
                     .font(.headline)
 
                 HStack(spacing: 14) {
-                    attribute(label: "Budget fit", value: "\(Int(recommendation.matchScore))")
-                    attribute(label: "Season fit", value: destination.typicalSeason.joined(separator: " • "))
-                    attribute(label: "Style fit", value: destination.styles.prefix(2).joined(separator: " + "))
+                    attribute(label: L10n.tr("Budget fit"), value: "\(Int(recommendation.matchScore))")
+                    attribute(label: L10n.tr("Season fit"), value: destination.typicalSeason.map(L10n.season).joined(separator: " • "))
+                    attribute(label: L10n.tr("Style fit"), value: destination.styles.prefix(2).map(L10n.style).joined(separator: " + "))
                 }
             }
         }
@@ -84,11 +84,11 @@ struct DestinationDetailView: View {
     private var ecoAlternativesSection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Eco alternatives")
+                Text(L10n.tr("Eco alternatives"))
                     .font(.headline)
 
                 if ecoAlternatives.isEmpty {
-                    Text("No lower-CO2 alternatives found for this style.")
+                    Text(L10n.tr("No lower-CO2 alternatives found for this style."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
@@ -97,12 +97,12 @@ struct DestinationDetailView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(option.name)
                                     .font(.subheadline.weight(.semibold))
-                                Text("\(option.country) • Eco \(Int(option.ecoScore))")
+                                Text(L10n.f("%@ • Eco %d", option.country, Int(option.ecoScore)))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Text("~\(Int(option.distanceKm * 0.18))kg")
+                            Text(L10n.f("~%dkg", Int(option.distanceKm * 0.18)))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
@@ -116,10 +116,10 @@ struct DestinationDetailView: View {
     private var communitySection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Community insight")
+                Text(L10n.tr("Community insight"))
                     .font(.headline)
 
-                Text(localInsight?.summaryText ?? "No local insight available yet.")
+                Text(localInsight?.summaryText ?? L10n.tr("No local insight available yet."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -129,14 +129,14 @@ struct DestinationDetailView: View {
 
                     if !travelerEntries.isEmpty {
                         let avg = Double(travelerEntries.map(\.rating).reduce(0, +)) / Double(travelerEntries.count)
-                        Text("Traveler average rating: \(avg.formatted(.number.precision(.fractionLength(1))))/5 (\(travelerEntries.count))")
+                        Text(L10n.f("Traveler average rating: %@/5 (%d)", avg.formatted(.number.precision(.fractionLength(1))), travelerEntries.count))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
                     if !localEntries.isEmpty {
                         let avg = Double(localEntries.map(\.rating).reduce(0, +)) / Double(localEntries.count)
-                        Text("Local average rating: \(avg.formatted(.number.precision(.fractionLength(1))))/5 (\(localEntries.count))")
+                        Text(L10n.f("Local average rating: %@/5 (%d)", avg.formatted(.number.precision(.fractionLength(1))), localEntries.count))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

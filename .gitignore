@@ -1,0 +1,30 @@
+.DS_Store
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Build products
+DerivedData/
+build/
+.build/
+
+# Local editor folders
+.idea/
+.vscode/
+
+# Local automation/debug artifacts
+.codex-deriveddata*/
+
+# Local environment and overrides
+.env
+.env.*
+*.local
+Waypoint/Resources/*Config.local.plist
+

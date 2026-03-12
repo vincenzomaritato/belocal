@@ -4,10 +4,11 @@ import SwiftData
 @Model
 final class UserProfile {
     @Attribute(.unique) var id: UUID
+    var authUserId: String
     var name: String
     // Persistent defaults allow lightweight migration when these fields are added later.
-    var homeCity: String = "Rome"
-    var homeCountry: String = "Italy"
+    var homeCity: String = ""
+    var homeCountry: String = ""
     var budgetMin: Double
     var budgetMax: Double
     var preferredSeasonsJSON: String
@@ -19,9 +20,10 @@ final class UserProfile {
 
     init(
         id: UUID = UUID(),
+        authUserId: String = "",
         name: String,
-        homeCity: String = "Rome",
-        homeCountry: String = "Italy",
+        homeCity: String = "",
+        homeCountry: String = "",
         budgetMin: Double,
         budgetMax: Double,
         preferredSeasons: [String],
@@ -32,6 +34,7 @@ final class UserProfile {
         homeLongitude: Double = TravelDistanceCalculator.defaultHomeLongitude
     ) {
         self.id = id
+        self.authUserId = authUserId
         self.name = name
         self.homeCity = homeCity
         self.homeCountry = homeCountry
@@ -59,6 +62,6 @@ final class UserProfile {
         let city = homeCity.trimmingCharacters(in: .whitespacesAndNewlines)
         let country = homeCountry.trimmingCharacters(in: .whitespacesAndNewlines)
         let joined = [city, country].filter { !$0.isEmpty }.joined(separator: ", ")
-        return joined.isEmpty ? "Configured" : joined
+        return joined.isEmpty ? L10n.tr("Not set") : joined
     }
 }

@@ -5,6 +5,7 @@ import Observation
 @MainActor
 final class AppSettingsStore {
     private let defaults: UserDefaults
+    private let tokenStore: KeychainTokenStore
 
     var isAuthenticated: Bool {
         didSet {
@@ -26,13 +27,13 @@ final class AppSettingsStore {
 
     var supabaseAccessToken: String {
         didSet {
-            defaults.set(supabaseAccessToken, forKey: Keys.supabaseAccessToken)
+            tokenStore.set(supabaseAccessToken, for: .supabaseAccessToken)
         }
     }
 
     var supabaseRefreshToken: String {
         didSet {
-            defaults.set(supabaseRefreshToken, forKey: Keys.supabaseRefreshToken)
+            tokenStore.set(supabaseRefreshToken, for: .supabaseRefreshToken)
         }
     }
 
@@ -54,16 +55,26 @@ final class AppSettingsStore {
         }
     }
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, tokenStore: KeychainTokenStore = KeychainTokenStore()) {
         self.defaults = defaults
+        self.tokenStore = tokenStore
         self.isAuthenticated = defaults.bool(forKey: Keys.isAuthenticated)
         self.authenticatedEmail = defaults.string(forKey: Keys.authenticatedEmail) ?? ""
         self.authenticatedUserID = defaults.string(forKey: Keys.authenticatedUserID) ?? ""
-        self.supabaseAccessToken = defaults.string(forKey: Keys.supabaseAccessToken) ?? ""
-        self.supabaseRefreshToken = defaults.string(forKey: Keys.supabaseRefreshToken) ?? ""
+        let legacyAccessToken = defaults.string(forKey: Keys.supabaseAccessToken) ?? ""
+        let storedAccessToken = tokenStore.string(for: .supabaseAccessToken)
+        self.supabaseAccessToken = storedAccessToken.isEmpty ? legacyAccessToken : storedAccessToken
+        let legacyRefreshToken = defaults.string(forKey: Keys.supabaseRefreshToken) ?? ""
+        let storedRefreshToken = tokenStore.string(for: .supabaseRefreshToken)
+        self.supabaseRefreshToken = storedRefreshToken.isEmpty ? legacyRefreshToken : storedRefreshToken
         self.supabaseTokenExpiresAt = defaults.object(forKey: Keys.supabaseTokenExpiresAt) as? Date ?? .distantPast
         self.hasCompletedOnboarding = defaults.bool(forKey: Keys.hasCompletedOnboarding)
         self.hasSeenOnboardingWelcome = defaults.bool(forKey: Keys.hasSeenOnboardingWelcome)
+
+        migrateLegacyTokensIfNeeded(
+            legacyAccessToken: legacyAccessToken,
+            legacyRefreshToken: legacyRefreshToken
+        )
     }
 
     func completeSignIn(email: String) {
@@ -131,6 +142,10 @@ final class AppSettingsStore {
         hasSeenOnboardingWelcome = true
     }
 
+    func rememberAuthEmail(_ email: String?) {
+        authenticatedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
     func signOut() {
         isAuthenticated = false
         authenticatedEmail = ""
@@ -151,5 +166,20 @@ final class AppSettingsStore {
         static let supabaseTokenExpiresAt = "settings.auth.supabase.expiresAt"
         static let hasCompletedOnboarding = "settings.auth.hasCompletedOnboarding"
         static let hasSeenOnboardingWelcome = "settings.auth.hasSeenOnboardingWelcome"
+    }
+
+    private func migrateLegacyTokensIfNeeded(
+        legacyAccessToken: String,
+        legacyRefreshToken: String
+    ) {
+        if !legacyAccessToken.isEmpty && tokenStore.string(for: .supabaseAccessToken).isEmpty {
+            tokenStore.set(legacyAccessToken, for: .supabaseAccessToken)
+        }
+        if !legacyRefreshToken.isEmpty && tokenStore.string(for: .supabaseRefreshToken).isEmpty {
+            tokenStore.set(legacyRefreshToken, for: .supabaseRefreshToken)
+        }
+
+        defaults.removeObject(forKey: Keys.supabaseAccessToken)
+        defaults.removeObject(forKey: Keys.supabaseRefreshToken)
     }
 }

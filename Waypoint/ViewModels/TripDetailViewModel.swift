@@ -116,7 +116,7 @@ final class TripDetailViewModel {
             }
         } catch {
             savingFeedback = false
-            feedbackError = "Failed to save feedback locally."
+            feedbackError = L10n.tr("Failed to save feedback locally.")
         }
     }
 
@@ -177,7 +177,7 @@ final class TripDetailViewModel {
             onSaved()
         } catch {
             isUpdatingTrip = false
-            tripMutationError = "Could not update this trip."
+            tripMutationError = L10n.tr("Could not update this trip.")
         }
     }
 
@@ -229,7 +229,7 @@ final class TripDetailViewModel {
             onDeleted()
         } catch {
             isDeletingTrip = false
-            tripMutationError = "Could not delete this trip."
+            tripMutationError = L10n.tr("Could not delete this trip.")
         }
     }
 }

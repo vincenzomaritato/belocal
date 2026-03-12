@@ -8,7 +8,7 @@ struct ProfileToolbarButton: View {
             Image(systemName: "person.crop.circle")
                 .font(.title3.weight(.semibold))
         }
-        .accessibilityLabel("Open profile")
-        .accessibilityHint("Opens account settings and travel preferences")
+        .accessibilityLabel(L10n.tr("Open profile"))
+        .accessibilityHint(L10n.tr("Opens account settings and travel preferences"))
     }
 }

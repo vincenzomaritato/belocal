@@ -26,17 +26,17 @@ struct FeedbackLocationOption: Identifiable, Hashable {
         case .local:
             let destination = destinationName.trimmingCharacters(in: .whitespacesAndNewlines)
             if !destination.isEmpty {
-                return "Local in \(destination)"
+                return L10n.f("Local in %@", destination)
             }
             if !authorHomeLabel.isEmpty {
-                return "Local in \(authorHomeLabel)"
+                return L10n.f("Local in %@", authorHomeLabel)
             }
-            return "Local"
+            return L10n.tr("Local")
         case .traveler:
             if !authorHomeLabel.isEmpty {
-                return "Traveler from \(authorHomeLabel)"
+                return L10n.f("Traveler from %@", authorHomeLabel)
             }
-            return "Traveler"
+            return L10n.tr("Traveler")
         }
     }
 }

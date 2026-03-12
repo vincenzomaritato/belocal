@@ -1,5 +1,17 @@
 import Foundation
 
+struct ToolSearchResult<Item: Hashable & Sendable>: Hashable, Sendable {
+    let items: [Item]
+    let message: String?
+    let isUnavailable: Bool
+
+    init(items: [Item], message: String? = nil, isUnavailable: Bool = false) {
+        self.items = items
+        self.message = message
+        self.isUnavailable = isUnavailable
+    }
+}
+
 struct SearchInput: Sendable {
     var query: String
     var budget: Double
@@ -13,8 +25,8 @@ struct SearchInput: Sendable {
 }
 
 protocol SearchModule {
-    associatedtype Result
-    func search(_ input: SearchInput) async -> [Result]
+    associatedtype Result: Hashable & Sendable
+    func search(_ input: SearchInput) async -> ToolSearchResult<Result>
 }
 
 struct FlightOption: Identifiable, Hashable, Sendable {

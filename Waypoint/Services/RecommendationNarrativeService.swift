@@ -87,7 +87,7 @@ struct FoundationModelsRecommendationNarrativeService: RecommendationNarrativeSe
     }
 
     private var preferredNarrativeLanguage: String {
-        "English"
+        L10n.preferredNarrativeLanguage
     }
 }
 
@@ -145,7 +145,7 @@ struct OpenAIRecommendationNarrativeService: RecommendationNarrativeServing {
     }
 
     private var preferredNarrativeLanguage: String {
-        "English"
+        L10n.preferredNarrativeLanguage
     }
 }
 
