@@ -122,8 +122,8 @@ This project is presented by the **Apollo Team** for the **Apple Foundation Prog
     <td>Sila Farasat</td>
   </tr>
   <tr>
-    <td>Alessandra Imperatore</td>
     <td>Vincenzo Maritato</td>
+    <td>Alessandra Imperatore</td>
   </tr>
   <tr>
     <td>Antonio Rigione</td>
@@ -134,10 +134,6 @@ This project is presented by the **Apollo Team** for the **Apple Foundation Prog
     <td></td>
   </tr>
 </table>
-
-<p>
-  <strong>Repository maintainer for this public version:</strong> Vincenzo Maritato
-</p>
 
 ## Project Vision
 
