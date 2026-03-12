@@ -325,7 +325,7 @@ final class PlannerViewModel {
         }
     }
 
-    private func appendToolMessage<Item: Hashable & Sendable>(
+    private func appendToolMessage<Item: Sendable>(
         result: ToolSearchResult<Item>,
         successMessage: String,
         emptyMessage: String,

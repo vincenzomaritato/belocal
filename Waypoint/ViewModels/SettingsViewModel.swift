@@ -244,7 +244,7 @@ final class SettingsViewModel {
 
     private func profileSyncPayload(for profile: UserProfile, authUserID: String) -> [String: String] {
         let normalizedAuthUserID = authUserID.trimmingCharacters(in: .whitespacesAndNewlines)
-        [
+        return [
             "profileId": profile.id.uuidString,
             "authUserId": normalizedAuthUserID,
             "name": profile.name,

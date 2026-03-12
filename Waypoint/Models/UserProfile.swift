@@ -4,9 +4,9 @@ import SwiftData
 @Model
 final class UserProfile {
     @Attribute(.unique) var id: UUID
-    var authUserId: String
-    var name: String
     // Persistent defaults allow lightweight migration when these fields are added later.
+    var authUserId: String = ""
+    var name: String
     var homeCity: String = ""
     var homeCountry: String = ""
     var budgetMin: Double

@@ -768,8 +768,8 @@ struct OnboardingFlowView: View {
         var profile = homeViewModel.userProfile
         if profile == nil {
             profile = UserProfile(
-                name: finalName,
                 authUserId: bootstrap.settingsStore.authenticatedUserID,
+                name: finalName,
                 homeCity: homeCity,
                 homeCountry: homeCountry,
                 budgetMin: budgetPreset.range.lowerBound,
