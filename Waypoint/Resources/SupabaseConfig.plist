@@ -5,9 +5,9 @@
 	<key>PROJECT_NAME</key>
 	<string>BeLocal</string>
 	<key>PROJECT_URL</key>
-    <string>YOUR_SUPABASE_PROJECT_URL</string>
+	<string>YOUR_SUPABASE_PROJECT_URL</string>
 	<key>ANON_KEY</key>
-    <string>YOUR_SUPABASE_PUBLISHABLE_KEY</string>
+	<string>YOUR_SUPABASE_PUBLISHABLE_KEY</string>
 	<key>TRIPS_TABLE</key>
 	<string>trips</string>
 	<key>FEEDBACK_TABLE</key>

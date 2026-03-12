@@ -1,6 +1,6 @@
 <div align="center">
   <img src="Waypoint/Resources/banner.png" alt="BeLocal banner" width="100%" />
-  <h1>Waypoint</h1>
+  <h1>BeLocal</h1>
   <p>
     <strong>BeLocal</strong> is an iOS travel app that turns preferences, local perspective, and AI planning
     into more personal destination discovery.
@@ -29,7 +29,7 @@
 
 ## Overview
 
-Waypoint is the public repository for **BeLocal**, an iOS product designed to make travel recommendations feel more human, contextual, and useful.
+BeLocal is the public repository for an iOS product designed to make travel recommendations feel more human, contextual, and useful.
 
 Instead of showing the same generic destinations to everyone, BeLocal combines:
 
@@ -89,7 +89,7 @@ This repository is meant to show:
 
 ## Team
 
-This project is presented by the **Waypoint team** for the **Apple Foundation Program**.
+This project is presented by the **Apollo Team** for the **Apple Foundation Program**.
 
 <table>
   <tr>
@@ -98,7 +98,7 @@ This project is presented by the **Waypoint team** for the **Apple Foundation Pr
   </tr>
   <tr>
     <td><strong>Team</strong></td>
-    <td>Waypoint</td>
+    <td>Apollo Team</td>
   </tr>
   <tr>
     <td><strong>Context</strong></td>
@@ -108,21 +108,45 @@ This project is presented by the **Waypoint team** for the **Apple Foundation Pr
     <td><strong>Focus</strong></td>
     <td>Travel discovery, local insight, and AI-assisted trip planning</td>
   </tr>
+  <tr>
+    <td><strong>Audience</strong></td>
+    <td>Young adults who want a more authentic and personalized travel experience</td>
+  </tr>
 </table>
 
-<details>
-  <summary><strong>Suggested credits section</strong></summary>
+### Participants
 
-Add your final public credits here before the presentation or public launch.
+<table>
+  <tr>
+    <td>Maria Bianco</td>
+    <td>Sila Farasat</td>
+  </tr>
+  <tr>
+    <td>Alessandra Imperatore</td>
+    <td>Vincenzo Maritato</td>
+  </tr>
+  <tr>
+    <td>Antonio Rigione</td>
+    <td>Alessandro Signorile</td>
+  </tr>
+  <tr>
+    <td>Ylenia Villani</td>
+    <td></td>
+  </tr>
+</table>
 
-Example:
+<p>
+  <strong>Repository maintainer for this public version:</strong> Vincenzo Maritato
+</p>
 
-- Name Surname — Product & UX
-- Name Surname — iOS Development
-- Name Surname — AI & Data Logic
-- Name Surname — Research, Testing & Content
+## Project Vision
 
-</details>
+Based on the project material, BeLocal is designed to help travelers build a more personal trip with:
+
+- recommendations filtered around their preferences
+- local suggestions and community feedback
+- AI support for tailor-made itineraries
+- exploration tools that make planning less generic and more authentic
 
 ## Product Highlights
 
