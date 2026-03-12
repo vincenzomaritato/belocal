@@ -1,51 +1,170 @@
-# Waypoint
+<div align="center">
+  <img src="Waypoint/Resources/banner.png" alt="BeLocal banner" width="100%" />
+  <h1>Waypoint</h1>
+  <p>
+    <strong>BeLocal</strong> is an iOS travel app that turns preferences, local perspective, and AI planning
+    into more personal destination discovery.
+  </p>
+  <p>
+    Built with SwiftUI, CoreML, Apple Foundation Models, Supabase, and the OpenAI Responses API.
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/platform-iOS-111111?style=for-the-badge&logo=apple" alt="iOS badge" />
+    <img src="https://img.shields.io/badge/SwiftUI-App-blue?style=for-the-badge&logo=swift" alt="SwiftUI badge" />
+    <img src="https://img.shields.io/badge/AI-Foundation%20Models%20%2B%20OpenAI-0A7C66?style=for-the-badge" alt="AI badge" />
+    <img src="https://img.shields.io/badge/Program-Apple%20Foundation%20Program-lightgrey?style=for-the-badge&logo=apple" alt="Apple Foundation Program badge" />
+  </p>
+</div>
 
-Waypoint is the public repository for **BeLocal**, an iOS travel companion focused on personalized destination discovery, city exploration, and AI-assisted trip planning.
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#why-belocal">Why BeLocal</a> •
+  <a href="#features">Features</a> •
+  <a href="#team">Team</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#getting-started">Getting Started</a>
+</p>
 
-![BeLocal logo](Waypoint/Resources/logo.svg)
+---
 
 ## Overview
 
-BeLocal combines local-first travel data, personalized ranking, and AI-assisted planning in a single SwiftUI app. The product is built for travelers who want suggestions that feel grounded in budget, seasonality, sustainability, and local perspective instead of generic “top destinations” lists.
+Waypoint is the public repository for **BeLocal**, an iOS product designed to make travel recommendations feel more human, contextual, and useful.
 
-## What the app does
+Instead of showing the same generic destinations to everyone, BeLocal combines:
 
-- Builds a travel profile through onboarding and uses it to rank destinations.
-- Recommends destinations with explainable scoring, CO2 estimates, and style matching.
-- Lets users explore cities on a map, browse attractions, and read traveler/local feedback.
-- Generates planning conversations and final travel briefs through an AI planner workflow.
-- Stores user state locally with SwiftData and syncs authenticated data with Supabase.
-- Supports multilingual UX and adaptive fallbacks when online services are unavailable.
+- personal travel preferences
+- budget and seasonal fit
+- sustainability signals
+- local and traveler feedback
+- conversational AI planning
 
-## Product highlights
+The result is a travel experience that helps users discover where to go, why it fits them, and how to start shaping the trip.
 
-- **Personalized recommendation engine** powered by CoreML, explicit preference signals, and explainability layers.
-- **City Explorer** built with MapKit, live enrichment, and feedback translation.
-- **Planner Studio** with conversational planning, saved conversations, and final brief generation.
-- **Hybrid AI stack** using Apple Foundation Models when available and OpenAI-backed services where needed.
-- **Offline-aware architecture** with local persistence, queued sync operations, and network monitoring.
+## Why BeLocal
 
-## Tech stack
+Travel apps often optimize for popularity, not relevance. BeLocal takes a different approach:
 
-- Swift
-- SwiftUI
-- SwiftData
-- CoreML
-- MapKit
-- Foundation Models
-- Supabase REST/Auth
-- OpenAI Responses API
-- Google Places API
-- Geoapify
+- It starts from the traveler profile, not from a global ranking.
+- It explains why a destination is recommended instead of hiding the logic.
+- It values local perspective and sustainability alongside price and style.
+- It connects inspiration, exploration, and planning inside one app.
 
-## Repository structure
+## Features
+
+### Personalized recommendations
+
+- Onboarding creates a travel profile based on budget, preferred seasons, travel style, and sustainability sensitivity.
+- A recommendation engine blends CoreML scoring, explicit user preferences, and explainability.
+- Each destination surfaces contextual reasoning, match strength, and estimated CO2 impact.
+
+### City exploration
+
+- Interactive map-based city discovery powered by MapKit.
+- Attraction and city information enriched by external travel services.
+- Feedback from travelers and locals adds a more grounded view of each destination.
+
+### AI planner
+
+- Conversational trip planning through a dedicated planner flow.
+- Saved planner conversations and final travel briefs.
+- Hybrid AI strategy using Apple Foundation Models where available and OpenAI-backed services when needed.
+
+### Offline-aware experience
+
+- Local-first persistence with SwiftData.
+- Sync queue and online/offline awareness through Supabase and network monitoring.
+- Graceful fallbacks when live services are unavailable.
+
+## Apple Foundation Program
+
+BeLocal is being developed as part of the **Apple Foundation Program**, where the project is shaped as both a product concept and a production-minded iOS implementation.
+
+This repository is meant to show:
+
+- product thinking
+- SwiftUI and iOS engineering quality
+- experimentation with AI-powered user experiences
+- iterative design informed by real traveler needs
+
+## Team
+
+This project is presented by the **Waypoint team** for the **Apple Foundation Program**.
+
+<table>
+  <tr>
+    <td><strong>Project</strong></td>
+    <td>BeLocal</td>
+  </tr>
+  <tr>
+    <td><strong>Team</strong></td>
+    <td>Waypoint</td>
+  </tr>
+  <tr>
+    <td><strong>Context</strong></td>
+    <td>Apple Foundation Program</td>
+  </tr>
+  <tr>
+    <td><strong>Focus</strong></td>
+    <td>Travel discovery, local insight, and AI-assisted trip planning</td>
+  </tr>
+</table>
+
+<details>
+  <summary><strong>Suggested credits section</strong></summary>
+
+Add your final public credits here before the presentation or public launch.
+
+Example:
+
+- Name Surname — Product & UX
+- Name Surname — iOS Development
+- Name Surname — AI & Data Logic
+- Name Surname — Research, Testing & Content
+
+</details>
+
+## Product Highlights
+
+- **Recommendation engine** with explainable ranking and profile-driven scoring
+- **Planner Studio** with chat-based trip generation and saved briefs
+- **City Explorer** with interactive map browsing and live enrichment
+- **Multilingual support** through localized strings and translated feedback flows
+- **Architecture ready for real services** with Supabase sync and external travel APIs
+
+## Tech Stack
+
+<table>
+  <tr>
+    <td><strong>Client</strong></td>
+    <td>Swift, SwiftUI, SwiftData</td>
+  </tr>
+  <tr>
+    <td><strong>Apple technologies</strong></td>
+    <td>CoreML, MapKit, Foundation Models</td>
+  </tr>
+  <tr>
+    <td><strong>Backend services</strong></td>
+    <td>Supabase Auth and REST</td>
+  </tr>
+  <tr>
+    <td><strong>AI services</strong></td>
+    <td>OpenAI Responses API</td>
+  </tr>
+  <tr>
+    <td><strong>Travel data</strong></td>
+    <td>Google Places API, Geoapify</td>
+  </tr>
+</table>
+
+## Repository Structure
 
 ```text
 Waypoint/
-├── Waypoint/                  # App source, resources, models, services, and views
+├── Waypoint/                  # App source, models, services, resources, and views
 ├── Waypoint.xcodeproj/        # Xcode project
 ├── .github/                   # Issue and pull request templates
-├── docs/                      # Public project documentation
+├── docs/                      # Public setup and project notes
 ├── README.md
 ├── CONTRIBUTING.md
 ├── CODE_OF_CONDUCT.md
@@ -53,14 +172,14 @@ Waypoint/
 └── LICENSE
 ```
 
-## Getting started
+## Getting Started
 
 ### Prerequisites
 
-- macOS with full Xcode installed
+- macOS with the full Xcode app installed
 - Xcode 26.3 or newer recommended
-- iOS Simulator or physical device matching the project deployment target
-- Optional service accounts for Supabase, OpenAI, Google Places, and Geoapify
+- iOS Simulator or a physical device
+- Optional accounts for Supabase, OpenAI, Google Places, and Geoapify
 
 ### Local setup
 
@@ -68,14 +187,14 @@ Waypoint/
 2. Fill the placeholder values in:
    - [`Waypoint/Resources/SupabaseConfig.plist`](Waypoint/Resources/SupabaseConfig.plist)
    - [`Waypoint/Resources/TravelAPIConfig.plist`](Waypoint/Resources/TravelAPIConfig.plist)
-3. Alternatively, configure runtime environment variables in your Xcode scheme as documented in [`docs/setup.md`](docs/setup.md).
+3. Or configure runtime variables through your Xcode scheme as documented in [`docs/setup.md`](docs/setup.md).
 4. Run the `Waypoint` target.
 
-## Public repository notes
+## Public Repository Notes
 
-- This repository is prepared for public sharing with placeholder configuration values only.
-- User-specific Xcode files and local build artifacts are ignored.
-- If secrets were ever committed in previous local history, rotate them before publishing the remote repository.
+- Committed configuration files contain placeholder values only.
+- User-specific Xcode data and local build artifacts are ignored.
+- If secrets were committed in local history before publication, rotate them before pushing the repository publicly.
 
 ## Contributing
 
@@ -88,3 +207,11 @@ If you discover a vulnerability or an exposed credential, follow [`SECURITY.md`]
 ## License
 
 This project is released under the MIT License. See [`LICENSE`](LICENSE).
+
+---
+
+<div align="center">
+  <sub>
+    Built with SwiftUI, curiosity, and an unreasonable number of imaginary weekend trips.
+  </sub>
+</div>
